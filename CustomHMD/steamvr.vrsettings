@@ -1,0 +1,27 @@
+{
+   "CustomHMD" :
+    {
+        "ipd"                       : 0.065,
+        "windowX"                   : 0,
+        "windowY"                   : 0,
+        "windowWidth"               : 1920,
+        "windowHeight"              : 1080,
+        "renderWidth"               : 1920,
+        "renderHeight"              : 1080,
+        "secondsFromVsyncToPhotons" : 0,
+        "displayFrequency"          : 144,
+        "DistortionK1"              : 0,
+        "DistortionK2"              : 0,
+        "ZoomWidth"                 : 0.99,
+        "ZoomHeight"                : 0.99,
+        "DistanceBetweenEyes"       : 0,
+        "ScreenOffsetX"             : 0,
+        "enable"                    : true,
+        "DebugMode"                 : true
+    },
+   "steamvr" :
+    {
+        "forcedDriver"              : "CustomHMD",
+        "supersampleScale"          : 1
+    }
+}
