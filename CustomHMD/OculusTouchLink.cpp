@@ -802,6 +802,7 @@ public:                                                                         
         pose.vecAngularVelocity[1] = ss.HandPoses[isRightHand].AngularVelocity.y;
         pose.vecAngularVelocity[2] = ss.HandPoses[isRightHand].AngularVelocity.z;
 
+        pose.poseTimeOffset = 0.01;
         return pose;
     }
 

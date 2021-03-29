@@ -384,10 +384,10 @@ void GuardianSystemDemo::Render()
 
 
 
-int main()
+int main( int argc, char** argsv)
 {
-    std::cout << "Hello World!\n";
-#if 1
+    std::cout << "Hello World! "<<argc<<std::endl;
+#if 0
     GuardianSystemDemo* instance = new (_aligned_malloc(sizeof(GuardianSystemDemo), 16)) GuardianSystemDemo();
     instance->Start(0);
     delete instance;
@@ -397,7 +397,7 @@ int main()
   //  ovrSession hmd2 = nullptr;
     ovrGraphicsLuid luid{};
   //  ovrGraphicsLuid luid2{};
-    ovrInitParams initParams = { ovrInit_RequestVersion | ovrInit_FocusAware | ovrInit_Invisible, OVR_MINOR_VERSION, NULL, 0, 0 };
+    ovrInitParams initParams = { ovrInit_RequestVersion | ovrInit_FocusAware | ((argc>1)?0:ovrInit_Invisible), OVR_MINOR_VERSION, NULL, 0, 0 };
     /*ovrResult result = ovr_Initialize(&initParams);   */
     if (!mSession) {
 #if 0
@@ -411,7 +411,11 @@ int main()
 
         if (OVR_FAILURE(ovr_SetTrackingOriginType(mSession, ovrTrackingOrigin_FloorLevel)))  std::cout << "ovr_SetTrackingOriginType error" << std::endl;
     }
-
+    if (argc > 1) {
+        while (1)
+            Sleep(1000);
+        return 0;
+    }
 
     HANDLE hMapFile;
     shared_buffer* comm_buffer;
@@ -534,10 +538,10 @@ int main()
                 }
                 for (int i = 0; i < duration; i++) {
                     if ((i & 3) < ratio) {
-                        float v = (0.5f + (comm_buffer->vib_amplitude[i] * 0.55f)) * 255.0f;
+                        float v = (0.25f + (comm_buffer->vib_amplitude[i] * 0.8f)) * 255.0f;
                         uint8_t vb = v;
                         if (v > 255.0f) vb = 255;
-                        else if (v < 0.5f) vb = 255 / 2;
+                        else if (v < 0.25f) vb = 256 / 4;
 
                         buf[i] = vb; //(comm_buffer->vib_amplitude[i] < 0.5000001) ? 127 : 255;
                     }
