@@ -1,0 +1,10 @@
+{
+	"alwaysActivate": true,
+	"name" : "OculusTouchLink",
+	"directory" : "",
+	"resourceOnly" : false,
+		"hmd_presence" :
+	[
+		"*.*"
+	]
+}
