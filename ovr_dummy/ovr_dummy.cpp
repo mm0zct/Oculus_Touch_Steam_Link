@@ -25,24 +25,25 @@ int main()
     delete instance;
     return 0;
 #endif
-    ovrSession mSession = nullptr;
-  //  ovrSession hmd2 = nullptr;
-    ovrGraphicsLuid luid{};
-  //  ovrGraphicsLuid luid2{};
-    ovrInitParams initParams = { ovrInit_RequestVersion | ovrInit_FocusAware, OVR_MINOR_VERSION, NULL, 0, 0 };
-    /*ovrResult result = ovr_Initialize(&initParams);   */
-         
-    if (OVR_FAILURE(ovr_Initialize(&initParams)/*ovr_Initialize(nullptr)*/)) std::cout << "ovr_Initialize error" << std::endl;
+    while (1) {
+        std::cout << "restarting oculus runtime connection" << std::endl;
+        ovrSession mSession = nullptr;
+        //  ovrSession hmd2 = nullptr;
+        ovrGraphicsLuid luid{};
+        //  ovrGraphicsLuid luid2{};
+        ovrInitParams initParams = { ovrInit_RequestVersion | ovrInit_FocusAware, OVR_MINOR_VERSION, NULL, 0, 0 };
+        /*ovrResult result = ovr_Initialize(&initParams);   */
 
-    if (OVR_FAILURE(ovr_Create(&mSession, &luid)))  std::cout << "ovr_Create error" << std::endl;
+        if (OVR_FAILURE(ovr_Initialize(&initParams)/*ovr_Initialize(nullptr)*/)) std::cout << "ovr_Initialize error" << std::endl;
 
-    if (OVR_FAILURE(ovr_SetTrackingOriginType(mSession, ovrTrackingOrigin_FloorLevel)))  std::cout << "ovr_SetTrackingOriginType error" << std::endl;
+        if (OVR_FAILURE(ovr_Create(&mSession, &luid)))  std::cout << "ovr_Create error" << std::endl;
 
-    int temp;
-    std::cin >> temp;
+        if (OVR_FAILURE(ovr_SetTrackingOriginType(mSession, ovrTrackingOrigin_FloorLevel)))  std::cout << "ovr_SetTrackingOriginType error" << std::endl;
 
-    ovr_Destroy(mSession);
-    ovr_Shutdown();
+        ovr_Destroy(mSession);
+        ovr_Shutdown();
+        Sleep(200000);
+    }
 
 }
 

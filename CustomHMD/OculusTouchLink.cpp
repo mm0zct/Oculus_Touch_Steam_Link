@@ -739,13 +739,16 @@ public:                                                                         
         
             return ovrVector3f{ v.x + uv.x + uuv.x, v.y + uv.y + uuv.y, v.z + uv.z + uuv.z};
         }
-
     virtual DriverPose_t GetPose()
     {
-
+        m_last_pose.poseTimeOffset = m_time_of_last_pose - ovr_GetTimeInSeconds();
+        return this->m_last_pose;
+    }
+    virtual DriverPose_t CalculatePose()
+    {
 
         ovrTrackingState ss = ovr_GetTrackingState(mSession, 0, false);
-
+        m_time_of_last_pose = ss.HandPoses[isRightHand].TimeInSeconds;
         DriverPose_t pose = { 0 };
         pose.poseIsValid = true;
         pose.result = TrackingResult_Running_OK;
@@ -802,7 +805,7 @@ public:                                                                         
         pose.vecAngularVelocity[1] = ss.HandPoses[isRightHand].AngularVelocity.y;
         pose.vecAngularVelocity[2] = ss.HandPoses[isRightHand].AngularVelocity.z;
 
-        pose.poseTimeOffset = 0.01;
+        pose.poseTimeOffset = -0.01;
         return pose;
     }
 
@@ -1080,8 +1083,8 @@ public:                                                                         
         std::cerr << "x = " << hand_offset.x << " y = " << hand_offset.y << " z = " << hand_offset.z << " x2 =" << hand_offset2.x << " y2 = " << hand_offset2.y << " z = " << hand_offset2.z << std::endl; 
         */
 
-        DriverPose_t pose = this->GetPose();
-        vr::VRServerDriverHost()->TrackedDevicePoseUpdated(m_unObjectId, pose, sizeof(DriverPose_t));
+        m_last_pose = this->CalculatePose();
+        vr::VRServerDriverHost()->TrackedDevicePoseUpdated(m_unObjectId, m_last_pose, sizeof(DriverPose_t));
 
 
     }
@@ -1153,6 +1156,11 @@ private:
     ovrVector3f hand_offset;
     ovrVector3f hand_offset2;
 
+
+    DriverPose_t m_last_pose;
+    float m_time_of_last_pose;
+
+
     /*std::chrono::time_point<std::chrono::steady_clock>  haptic_end;
     float  haptic_strength;
     float  haptic_frequency; */
@@ -1165,7 +1173,7 @@ private:
 //-----------------------------------------------------------------------------
 // Purpose:
 //-----------------------------------------------------------------------------
-class CServerDriver_Sample : public IServerTrackedDeviceProvider
+class CServerDriver_OVRTL : public IServerTrackedDeviceProvider
 {
 public:
     virtual EVRInitError Init(vr::IVRDriverContext* pDriverContext);
@@ -1202,10 +1210,10 @@ private:
 #endif
 };
 
-CServerDriver_Sample g_serverDriverNull;
+CServerDriver_OVRTL g_serverDriverNull;
 
 
-void CServerDriver_Sample::Render()
+void CServerDriver_OVRTL::Render()
 {
 #if DRAW_FRAME
     // Get current eye pose for rendering
@@ -1256,7 +1264,7 @@ void CServerDriver_Sample::Render()
     }
 #endif
 }
-void CServerDriver_Sample::InitRenderTargets(const ovrHmdDesc& hmdDesc)
+void CServerDriver_OVRTL::InitRenderTargets(const ovrHmdDesc& hmdDesc)
 {
 #if DRAW_FRAME
     // For each eye
@@ -1335,7 +1343,7 @@ ovrQuatf ToQuaternion(double x, double y, double z)
     return q;
 }
 
-EVRInitError CServerDriver_Sample::Init(vr::IVRDriverContext* pDriverContext)
+EVRInitError CServerDriver_OVRTL::Init(vr::IVRDriverContext* pDriverContext)
 {
     VR_INIT_SERVER_DRIVER_CONTEXT(pDriverContext);
     InitDriverLog(vr::VRDriverLog());
@@ -1451,7 +1459,7 @@ EVRInitError CServerDriver_Sample::Init(vr::IVRDriverContext* pDriverContext)
     return VRInitError_None;
 }
 
-void CServerDriver_Sample::Cleanup()
+void CServerDriver_OVRTL::Cleanup()
 {
     CleanupDriverLog();
 #ifdef ADD_HMD
@@ -1477,7 +1485,7 @@ void CServerDriver_Sample::Cleanup()
 }
 
 
-void CServerDriver_Sample::RunFrame()
+void CServerDriver_OVRTL::RunFrame()
 {
 #ifdef ADD_HMD
     if (m_pNullHmdLatest)
