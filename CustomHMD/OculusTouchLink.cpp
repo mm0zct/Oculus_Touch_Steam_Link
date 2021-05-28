@@ -516,11 +516,11 @@ public:                                                                         
                     VRProperties()->SetStringProperty(m_ulPropertyContainer, Prop_RenderModelName_String, "oculus_cv1_controller_left");
                 }
         }
-        vr::VRProperties()->SetStringProperty(m_ulPropertyContainer, vr::Prop_TrackingSystemName_String, "oculus");
+        vr::VRProperties()->SetStringProperty(m_ulPropertyContainer, vr::Prop_TrackingSystemName_String, "oculus_link");
         vr::VRProperties()->SetStringProperty(m_ulPropertyContainer, vr::Prop_ModelNumber_String, m_sModelNumber.c_str());
         vr::VRProperties()->SetStringProperty(m_ulPropertyContainer, vr::Prop_SerialNumber_String, m_sSerialNumber.c_str());
        /* vr::VRProperties()->SetStringProperty(m_ulPropertyContainer, vr::Prop_RenderModelName_String, (isRightHand) ? "oculus_cv1_controller_right" : "oculus_cv1_controller_left");    */
-        vr::VRProperties()->SetStringProperty(m_ulPropertyContainer, vr::Prop_ManufacturerName_String, "Oculus");
+        vr::VRProperties()->SetStringProperty(m_ulPropertyContainer, vr::Prop_ManufacturerName_String, "Oculus_link");
         vr::VRProperties()->SetStringProperty(m_ulPropertyContainer, vr::Prop_HardwareRevision_String, "14");
         vr::VRProperties()->SetUint64Property(m_ulPropertyContainer, vr::Prop_HardwareRevision_Uint64, 14U);
         vr::VRProperties()->SetInt32Property(m_ulPropertyContainer, vr::Prop_DeviceClass_Int32, vr::TrackedDeviceClass_Controller);
@@ -554,7 +554,7 @@ public:                                                                         
 
 
         // return a constant that's not 0 (invalid), 1 is reserved for Oculus, so let's use that ;)
-        vr::VRProperties()->SetUint64Property(m_ulPropertyContainer, Prop_CurrentUniverseId_Uint64, 1);
+        vr::VRProperties()->SetUint64Property(m_ulPropertyContainer, Prop_CurrentUniverseId_Uint64, 31);
 
 
         if (isRightHand) {
@@ -741,6 +741,7 @@ public:                                                                         
         }
     virtual DriverPose_t GetPose()
     {
+        m_last_pose = CalculatePose();
         m_last_pose.poseTimeOffset = m_time_of_last_pose - ovr_GetTimeInSeconds();
         return this->m_last_pose;
     }
@@ -801,11 +802,15 @@ public:                                                                         
         pose.vecVelocity[1] = linVel.y;
         pose.vecVelocity[2] = linVel.z;
 
-        pose.vecAngularVelocity[0] = ss.HandPoses[isRightHand].AngularVelocity.x;
-        pose.vecAngularVelocity[1] = ss.HandPoses[isRightHand].AngularVelocity.y;
-        pose.vecAngularVelocity[2] = ss.HandPoses[isRightHand].AngularVelocity.z;
+        pose.vecAngularAcceleration[0] =  ss.HandPoses[isRightHand].AngularAcceleration.x;
+        pose.vecAngularAcceleration[1] =  ss.HandPoses[isRightHand].AngularAcceleration.y;
+        pose.vecAngularAcceleration[2] =  ss.HandPoses[isRightHand].AngularAcceleration.z;
 
-        pose.poseTimeOffset = -0.01;
+        pose.vecAngularVelocity[0] =  ss.HandPoses[isRightHand].AngularVelocity.x;
+        pose.vecAngularVelocity[1] =  ss.HandPoses[isRightHand].AngularVelocity.y;
+        pose.vecAngularVelocity[2] =  ss.HandPoses[isRightHand].AngularVelocity.z;
+
+        //pose.poseTimeOffset = -0.01;
         return pose;
     }
 
@@ -952,6 +957,40 @@ public:                                                                         
     { { 0.003263f, -0.034685f,  0.139926f,  1.000000f}, { 0.019690f, -0.100741f, -0.957331f, -0.270149f} },
     };
 
+    vr::HmdQuaternionf_t scaler_quat_mult(vr::HmdQuaternionf_t q, float s) {
+        vr::HmdQuaternionf_t qr { q.w * s, q.x * s, q.y * s, q.z * s };
+        return qr;
+    }
+    vr::HmdQuaternionf_t add_quat(vr::HmdQuaternionf_t q1, vr::HmdQuaternionf_t q2) {
+        vr::HmdQuaternionf_t qr {q1.w +  q2.w, q1.x + q2.x, q1.y + q2.y, q1.z + q2.z };
+        return qr;
+    }
+
+    HmdQuaternionf_t Nlerp(HmdQuaternionf_t qa, HmdQuaternionf_t qb, float t2) {
+        HmdQuaternionf_t qm;
+        float t1 = 1.0f - t2;
+        qm = add_quat(scaler_quat_mult(qa, t1), scaler_quat_mult(qb, t2));
+        float len = sqrtf(qm.x * qm.x + qm.y * qm.y + qm.z * qm.z + qm.w * qm.w);
+
+        return scaler_quat_mult(qm, 1.0/len);
+    }
+
+    HmdVector4_t v4_scalar_mult(HmdVector4_t v, float s) {
+        HmdVector4_t result{ v.v[0] * s, v.v[1] * s, v.v[2] * s, v.v[3] * s };
+        return result;
+    }
+
+    HmdVector4_t v4_add(HmdVector4_t v1, HmdVector4_t v2) {
+        HmdVector4_t r{v1.v[0] + v2.v[0], v1.v[1] + v2.v[1], v1.v[2] + v2.v[2], v1.v[3] + v2.v[3] };
+        return r;
+    }
+
+    VRBoneTransform_t blend_bones(VRBoneTransform_t b1, VRBoneTransform_t b2, float f) {
+        VRBoneTransform_t br;
+        br.position = v4_add(v4_scalar_mult(b1.position, (1.0 - f)), v4_scalar_mult(b2.position, f));
+        br.orientation = Nlerp(b1.orientation, b2.orientation, f);
+        return br;
+    }
 
     void RunFrame()
     {
@@ -978,18 +1017,22 @@ public:                                                                         
 #if DO_SKELETON
                 
                 VRBoneTransform_t active_hand_pose[HSB_Count];
+                float hand_blend_fraction = inputState.HandTrigger[isRightHand];
+                float finger_bend_fraction = inputState.IndexTrigger[isRightHand];
+                if (!(inputState.Touches & ovrTouch_RThumbUp)) {
+                    if (hand_blend_fraction < 0.1) hand_blend_fraction = 0.1;
+                    if (!(inputState.Touches & ovrTouch_RIndexPointing)) {
+                        if (finger_bend_fraction < 0.1) finger_bend_fraction = 0.1;
+                    }
+                }
 
-                if (inputState.HandTrigger[isRightHand] > 0.01) {
-                    for (int i = 0; i < HSB_Count; i++) active_hand_pose[i] = right_fist_pose[i];
-                }
-                else {
-                    for (int i = 0; i < HSB_Count; i++) active_hand_pose[i] = right_open_hand_pose[i];
-                }
+                for (int i = 0; i < HSB_Count; i++) active_hand_pose[i] = blend_bones(right_open_hand_pose[i], right_fist_pose[i], hand_blend_fraction);
 
-                if ((inputState.Touches & ovrTouch_RIndexPointing) || (inputState.IndexTrigger[isRightHand]<0.01))
-                {
-                    for (int i = HSB_IndexFinger0; i <= HSB_IndexFinger4; i++) active_hand_pose[i] = right_open_hand_pose[i];
-                }
+                for (int i = HSB_IndexFinger0; i <= HSB_IndexFinger4; i++) active_hand_pose[i] = blend_bones (right_open_hand_pose[i], right_fist_pose[i], finger_bend_fraction);
+                
+                if (finger_bend_fraction > hand_blend_fraction)
+                    for (int i = HSB_Thumb0; i <= HSB_Thumb3; i++) active_hand_pose[i] = blend_bones(right_open_hand_pose[i], right_fist_pose[i], finger_bend_fraction);
+
                 if (inputState.Touches & ovrTouch_RThumbUp)
                 {
                     for (int i = HSB_Thumb0; i <= HSB_Thumb3; i++) active_hand_pose[i] = right_open_hand_pose[i];
@@ -999,6 +1042,13 @@ public:                                                                         
                     vr::VRSkeletalMotionRange_WithoutController,
                     active_hand_pose,      
                     NUM_BONES);
+                vr::VRDriverInput()->UpdateSkeletonComponent(
+                    m_compSkel,
+                    vr::VRSkeletalMotionRange_WithController,
+                    active_hand_pose,
+                    NUM_BONES);
+
+                
 #endif
             }
             else {
@@ -1015,18 +1065,23 @@ public:                                                                         
 #if DO_LSKELETON
                 VRBoneTransform_t active_hand_pose[HSB_Count];
 
-                if (inputState.HandTrigger[isRightHand] > 0.01) {
-                    for (int i = 0; i < HSB_Count; i++) active_hand_pose[i] = left_fist_pose[i];
-                }
-                else {
-                    for (int i = 0; i < HSB_Count; i++) active_hand_pose[i] = left_open_hand_pose[i];
+                float hand_blend_fraction = inputState.HandTrigger[isRightHand];
+                float finger_bend_fraction = inputState.IndexTrigger[isRightHand];
+                if (!(inputState.Touches & ovrTouch_LThumbUp)) {
+                    if (hand_blend_fraction < 0.1) hand_blend_fraction = 0.1;
+                    if (!(inputState.Touches & ovrTouch_LIndexPointing)) {
+                        if (finger_bend_fraction < 0.1) finger_bend_fraction = 0.1;
+                    }
                 }
 
-                if ((inputState.Touches & ovrTouch_RIndexPointing) || (inputState.IndexTrigger[isRightHand] < 0.01))
-                {
-                    for (int i = HSB_IndexFinger0; i <= HSB_IndexFinger4; i++) active_hand_pose[i] = left_open_hand_pose[i];
-                }
-                if (inputState.Touches & ovrTouch_RThumbUp)
+                for (int i = 0; i < HSB_Count; i++) active_hand_pose[i] = blend_bones( left_open_hand_pose[i], left_fist_pose[i], hand_blend_fraction);
+
+                for (int i = HSB_IndexFinger0; i <= HSB_IndexFinger4; i++) active_hand_pose[i] = blend_bones(left_open_hand_pose[i], left_fist_pose[i], finger_bend_fraction);
+                
+                if (finger_bend_fraction > hand_blend_fraction)
+                    for (int i = HSB_Thumb0; i <= HSB_Thumb3; i++) active_hand_pose[i] = blend_bones(left_open_hand_pose[i], left_fist_pose[i], finger_bend_fraction);
+
+                if (inputState.Touches & ovrTouch_LThumbUp)
                 {
                     for (int i = HSB_Thumb0; i <= HSB_Thumb3; i++) active_hand_pose[i] = left_open_hand_pose[i];
                 }
@@ -1357,7 +1412,7 @@ EVRInitError CServerDriver_OVRTL::Init(vr::IVRDriverContext* pDriverContext)
 
     //map the shared memory buffer for communicating button and vibration data
 
-#if USE_SHARE_MEM_BUFFER 1    
+#if USE_SHARE_MEM_BUFFER
 #if 0         // this switch toggles who creates the buffer, 1 = this, 0 = ovr_test external component, 0 means that this driver will fail to load if the external part is not running, which could be desirable
     hMapFile = CreateFileMapping(
         INVALID_HANDLE_VALUE,    // use paging file

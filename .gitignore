@@ -27,3 +27,4 @@ ovr_dummy/x64/Release/ovr_test.log
 ovr_dummy/x64/Release/ovr_dummy.log
 ovr_dummy/x64/Release/ovr_dummy.vcxproj.FileListAbsolute.txt
 ovr_test/.vs/ovr_test/v16/.suo
+CustomHMD/Release/x64/driver_OculusTouchLink.dll.universe_31.7z
