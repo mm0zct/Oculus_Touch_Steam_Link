@@ -742,7 +742,13 @@ public:                                                                         
     virtual DriverPose_t GetPose()
     {
         m_last_pose = CalculatePose();
-        m_last_pose.poseTimeOffset = m_time_of_last_pose - ovr_GetTimeInSeconds();
+        m_last_pose.poseTimeOffset = 0;// m_time_of_last_pose - ovr_GetTimeInSeconds();
+       /* if (isRightHand) {
+            m_last_pose.poseTimeOffset = 5;// += 5;
+        }
+        else {
+            m_last_pose.poseTimeOffset = -5; // -= 5;
+        }*/
         return this->m_last_pose;
     }
     virtual DriverPose_t CalculatePose()
@@ -750,6 +756,7 @@ public:                                                                         
 
         ovrTrackingState ss = ovr_GetTrackingState(mSession, 0, false);
         m_time_of_last_pose = ss.HandPoses[isRightHand].TimeInSeconds;
+        float delta_t = 0.01 + (ovr_GetTimeInSeconds() - ss.HandPoses[isRightHand].TimeInSeconds);
         DriverPose_t pose = { 0 };
         pose.poseIsValid = true;
         pose.result = TrackingResult_Running_OK;
@@ -802,6 +809,13 @@ public:                                                                         
         pose.vecVelocity[1] = linVel.y;
         pose.vecVelocity[2] = linVel.z;
 
+        for (int i = 0; i < 3; i++){
+            pose.vecPosition[i] += pose.vecVelocity[i] * delta_t + 0.5 * pose.vecAcceleration[i] * delta_t * delta_t;
+            pose.vecVelocity[i] += pose.vecAcceleration[i] * delta_t;
+        }
+
+
+
         pose.vecAngularAcceleration[0] =  ss.HandPoses[isRightHand].AngularAcceleration.x;
         pose.vecAngularAcceleration[1] =  ss.HandPoses[isRightHand].AngularAcceleration.y;
         pose.vecAngularAcceleration[2] =  ss.HandPoses[isRightHand].AngularAcceleration.z;
@@ -811,6 +825,7 @@ public:                                                                         
         pose.vecAngularVelocity[2] =  ss.HandPoses[isRightHand].AngularVelocity.z;
 
         //pose.poseTimeOffset = -0.01;
+        pose.poseTimeOffset = ss.HandPoses[isRightHand].TimeInSeconds - ovr_GetTimeInSeconds();
         return pose;
     }
 
@@ -1088,6 +1103,11 @@ public:                                                                         
                 vr::VRDriverInput()->UpdateSkeletonComponent(
                     m_compSkel,
                     vr::VRSkeletalMotionRange_WithoutController,
+                    active_hand_pose,
+                    NUM_BONES);
+                vr::VRDriverInput()->UpdateSkeletonComponent(
+                    m_compSkel,
+                    vr::VRSkeletalMotionRange_WithController,
                     active_hand_pose,
                     NUM_BONES);
 #endif

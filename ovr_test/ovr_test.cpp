@@ -228,7 +228,7 @@ hMapFile = OpenFileMapping(
      
         WaitForSingleObject(comm_mutex, INFINITE);
         if (comm_buffer->vrEvent_type) {
-            //std::cout << "VR Event 0x" << comm_buffer->vrEvent_type << std::endl;
+            std::cout << "VR Event 0x" << comm_buffer->vrEvent_type << std::endl;
             comm_buffer->vrEvent_type = 0;
         }
         for (int i = 0; i < 2; i++) {
@@ -254,9 +254,10 @@ hMapFile = OpenFileMapping(
             comm_buffer->input_state.Thumbstick[i] = inputState.Thumbstick[i];
 
             if (comm_buffer->vib_valid[i]) {
+                printf("vib[%u] dur %f | freq %f | amp %f\n", i, comm_buffer->vib_duration_s[i], comm_buffer->vib_frequency[i], comm_buffer->vib_amplitude[i] );
                 int duration = comm_buffer->vib_duration_s[i] * 320;
                 if (duration > 128) duration = 128;
-                if (duration < 4) duration = 4;
+                if (duration < 2) duration = 2;
                 vibuffer.SamplesCount = duration;
 #ifndef MAX_HAPTICS                
                 uint32_t ratio = 1;
@@ -269,21 +270,25 @@ hMapFile = OpenFileMapping(
                 } else {
                     ratio = 1;
                 }
-                for (int i = 0; i < duration; i++) {                    
-                    if ((i & 3) < ratio) {
-                        float v = (0.5f + (comm_buffer->vib_amplitude[i] * 0.55f)) * 255.0f;
+                for (int j = 0; j < duration; j++) {                    
+                    if ((j & 3) < ratio) {
+                        float v = /*(0.5f +*/ (comm_buffer->vib_amplitude[i] /** 0.55f)*/) * 255.0f;
                         uint8_t vb=v;
                         if (v > 255.0f) vb = 255;
                         else if (v < 0.5f) vb = 255 / 2;
                         
-                        buf[i] = vb; //(comm_buffer->vib_amplitude[i] < 0.5000001) ? 127 : 255;
+                        buf[j] = vb; //(comm_buffer->vib_amplitude[i] < 0.5000001) ? 127 : 255;
                     } else {
-                        buf[i] = 0;
+                        buf[j] = 0;
                     }
                 }
 #endif
-                ovr_SubmitControllerVibration(mSession, (i>0) ? ovrControllerType_RTouch : ovrControllerType_LTouch, &vibuffer);
+                ovr_SubmitControllerVibration(mSession, ((i>0) ? ovrControllerType_RTouch : ovrControllerType_LTouch), &vibuffer);
                 comm_buffer->vib_valid[i] = 0;
+                for (int j = 0; j < (sizeof(buf)/* / 2*/); j++) {
+                    buf[j/* *2*/] = 255;
+                }
+
                if (0) {
                     float v = (0.5f + (comm_buffer->vib_amplitude[i] * 0.55f)) * 255.0f;
                     uint8_t vb = v;
@@ -492,7 +497,7 @@ int main( int argc, char** argsv)
 
         WaitForSingleObject(comm_mutex, INFINITE);
         if (comm_buffer->vrEvent_type) {
-            //std::cout << "VR Event 0x" << comm_buffer->vrEvent_type << std::endl;
+            std::cout << "VR Event 0x" << comm_buffer->vrEvent_type << std::endl;
             comm_buffer->vrEvent_type = 0;
         }
         for (int i = 0; i < 2; i++) {
@@ -518,9 +523,11 @@ int main( int argc, char** argsv)
             comm_buffer->input_state.Thumbstick[i] = inputState.Thumbstick[i];
 
             if (comm_buffer->vib_valid[i]) {
+                //printf("vib[%u] dur %f=%f | freq %f | amp %f\n", i, comm_buffer->vib_duration_s[i], comm_buffer->vib_duration_s[i]*320, comm_buffer->vib_frequency[i], comm_buffer->vib_amplitude[i]);
+
                 int duration = comm_buffer->vib_duration_s[i] * 320;
                 if (duration > 128) duration = 128;
-                if (duration < 4) duration = 4;
+                if (duration < 2) duration = 2;
                 vibuffer.SamplesCount = duration;
 #ifndef MAX_HAPTICS                
                 uint32_t ratio = 1;
@@ -536,22 +543,25 @@ int main( int argc, char** argsv)
                 else {
                     ratio = 1;
                 }
-                for (int i = 0; i < duration; i++) {
-                    if ((i & 3) < ratio) {
-                        float v = (0.25f + (comm_buffer->vib_amplitude[i] * 0.8f)) * 255.0f;
+                for (int j = 0; j < duration; j++) {
+                    if ((j & 3) < ratio) {
+                        float v = (0.1f + (comm_buffer->vib_amplitude[i] * 0.9f)) * 255.0f;
                         uint8_t vb = v;
                         if (v > 255.0f) vb = 255;
-                        else if (v < 0.25f) vb = 256 / 4;
+                        else if (v < 0.1f) vb = 256 / 10;
 
-                        buf[i] = vb; //(comm_buffer->vib_amplitude[i] < 0.5000001) ? 127 : 255;
+                        buf[j] = vb; //(comm_buffer->vib_amplitude[i] < 0.5000001) ? 127 : 255;
                     }
                     else {
-                        buf[i] = 0;
+                        buf[j] = 0;
                     }
                 }
 #endif
                 ovr_SubmitControllerVibration(mSession, (i > 0) ? ovrControllerType_RTouch : ovrControllerType_LTouch, &vibuffer);
                 comm_buffer->vib_valid[i] = 0;
+                for (int j = 0; j < (sizeof(buf)/* / 2*/); j++) {
+                    buf[j/* *2*/] = 255;
+                }
                 if (0) {
                     float v = (0.5f + (comm_buffer->vib_amplitude[i] * 0.55f)) * 255.0f;
                     uint8_t vb = v;
