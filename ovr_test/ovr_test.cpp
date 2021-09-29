@@ -14,6 +14,7 @@
 
 #include <Windows.h>
 #include <mutex>
+#include <thread>
 
 //#define MAX_HAPTICS
 
@@ -24,15 +25,134 @@ struct shared_buffer {
     float vib_frequency[2];
     float vib_duration_s[2];
     bool vib_valid[2];
+    uint32_t vr_universe;
+    bool perform_prediction;
+    bool be_objects;
+    float extra_prediction_ms;
+    char tracking_space_name[128]; //oculus or Oculus
+    char manufacturer_name[128]; //Oculus or Oculus_link
+    char logging_buffer[1024];
+    uint64_t logging_offset;
 };
 
 DirectX11 DIRECTX;
 
+uint32_t future_vib_buffer_index = 0;
+double vib_buf_time = 0;
+//uint8_t future_vib_buffer[1024] = { 0 };
+uint8_t future_vib_buffer[2][1024] = { {0},{0} };
+
+void add_vibration(bool isRightHand, float amplitude, float frequency, float duration);
+void main_loop(ovrSession mSession, HANDLE comm_mutex, shared_buffer* comm_buffer, uint64_t frame_count, ovrHapticsBuffer& vibuffer, uint8_t* buf, unsigned int sizeof_buf) {
+
+    ovrTrackingState ss = ovr_GetTrackingState(mSession, 0, false);
+
+    WaitForSingleObject(comm_mutex, INFINITE);
+    if (comm_buffer->logging_offset) {
+        for (int i = 0; i < comm_buffer->logging_offset; i++) {
+            putc(comm_buffer->logging_buffer[i], stdout);
+        }
+        comm_buffer->logging_offset = 0;
+    }
+    if (comm_buffer->vrEvent_type) {
+        //std::cout << "VR Event 0x" << comm_buffer->vrEvent_type << std::endl;
+        comm_buffer->vrEvent_type = 0;
+    }
+    for (int i = 0; i < 2; i++) {
+
+        ovrInputState inputState;
+        ovrResult input_res;
+        if (i == 1) {
+            input_res = ovr_GetInputState(mSession, ovrControllerType::ovrControllerType_RTouch, &inputState);
+            comm_buffer->input_state.Buttons &= ~ovrButton_RMask;
+            comm_buffer->input_state.Buttons |= (ovrButton_RMask & inputState.Buttons);
+            comm_buffer->input_state.Touches &= ~(ovrTouch_RButtonMask | ovrTouch_RPoseMask);
+            comm_buffer->input_state.Touches |= ((ovrTouch_RButtonMask | ovrTouch_RPoseMask) & inputState.Touches);
+        }
+        else {
+            input_res = ovr_GetInputState(mSession, ovrControllerType::ovrControllerType_LTouch, &inputState);
+            comm_buffer->input_state.Buttons &= ~ovrButton_LMask;
+            comm_buffer->input_state.Buttons |= (ovrButton_LMask & inputState.Buttons);
+            comm_buffer->input_state.Touches &= ~(ovrTouch_LButtonMask | ovrTouch_LPoseMask);
+            comm_buffer->input_state.Touches |= ((ovrTouch_LButtonMask | ovrTouch_LPoseMask) & inputState.Touches);
+        }
+        comm_buffer->input_state.HandTrigger[i] = inputState.HandTrigger[i];
+        comm_buffer->input_state.IndexTrigger[i] = inputState.IndexTrigger[i];
+        comm_buffer->input_state.Thumbstick[i] = inputState.Thumbstick[i];
+
+        if (comm_buffer->vib_valid[i]) {
+            add_vibration(i == 1, comm_buffer->vib_frequency[i], comm_buffer->vib_amplitude[i], comm_buffer->vib_duration_s[i]);
+            comm_buffer->vib_valid[i] = 0;
+            //printf("vib[%u] dur %f=%f | freq %f | amp %f\n", i, comm_buffer->vib_duration_s[i], comm_buffer->vib_duration_s[i]*320, comm_buffer->vib_frequency[i], comm_buffer->vib_amplitude[i]);
+#if 0
+            int duration = comm_buffer->vib_duration_s[i] * 320;
+            if (duration > 128) duration = 128;
+            if (duration < 2) duration = 2;
+            vibuffer.SamplesCount = duration;
+#ifndef MAX_HAPTICS                
+            uint32_t ratio = 1;
+            if (comm_buffer->vib_frequency[i] > 80/*300*/) {
+                ratio = 4;
+            }
+            else if (comm_buffer->vib_frequency[i] > 66/*230*/) {
+                ratio = 3;
+            }
+            else if (comm_buffer->vib_frequency[i] > 40/*160*/) {
+                ratio = 2;
+            }
+            else {
+                ratio = 1;
+            }
+            for (int j = 0; j < duration; j++) {
+                if ((j & 3) < ratio) {
+                    float v = (0.1f + (comm_buffer->vib_amplitude[i] * 0.9f)) * 255.0f;
+                    uint8_t vb = v;
+                    if (v > 255.0f) vb = 255;
+                    else if (v < 0.1f) vb = 256 / 10;
+
+                    buf[j] = vb; //(comm_buffer->vib_amplitude[i] < 0.5000001) ? 127 : 255;
+                }
+                else {
+                    buf[j] = 0;
+                }
+            }
+#endif
+            ovr_SubmitControllerVibration(mSession, (i > 0) ? ovrControllerType_RTouch : ovrControllerType_LTouch, &vibuffer);
+            comm_buffer->vib_valid[i] = 0;
+            for (int j = 0; j < sizeof_buf; j++) {
+                buf[j] = 255;
+            }
+#endif
+        }
+        ReleaseMutex(comm_mutex);
+        if ((frame_count & 0x7FF) == 0) {
+            std::cout.precision(4);
+
+            std::cout << (i == 0 ? "lhand" : "rhand") << " 0x" << std::fixed <<
+                std::hex << ss.HandStatusFlags[i] << " x " <<
+                ss.HandPoses[i].ThePose.Position.x << " y " <<
+                ss.HandPoses[i].ThePose.Position.y << " z " <<
+                ss.HandPoses[i].ThePose.Position.z << " button 0x" << inputState.Buttons << " touch 0x" << inputState.Touches << " g|t " << inputState.HandTrigger[i] << "|" << inputState.IndexTrigger[i] << " res 0x" << input_res;
+            //ovr_SetControllerVibration(mSession, i ? ovrControllerType_RTouch : ovrControllerType_LTouch, 1, 255);
+            //std::cout << " " << 
+
+            //ovrErrorInfo errorInfo;
+           // ovr_GetLastErrorInfo(&errorInfo);
+           // std::cout << " " << errorInfo.ErrorString;
+           /* if (i == 0) {
+                std::cout << " : ";
+            }else{ */
+            std::cout <<std::dec << std::endl;
+            /*} */
+        }
+    }
+
+}
 
 class GuardianSystemDemo
 {
 public:
-    void Start(HINSTANCE hinst);
+    void Start(HINSTANCE hinst, shared_buffer* comm_buffer, HANDLE comm_mutex);
     void InitRenderTargets(const ovrHmdDesc& hmdDesc);
 
 
@@ -123,7 +243,7 @@ void GuardianSystemDemo::InitRenderTargets(const ovrHmdDesc& hmdDesc)
 
 
 
-void GuardianSystemDemo::Start(HINSTANCE hinst)
+void GuardianSystemDemo::Start(HINSTANCE hinst, shared_buffer* comm_buffer, HANDLE comm_mutex)
 {
     hinst = hinst;
     ovrResult result;
@@ -154,46 +274,8 @@ void GuardianSystemDemo::Start(HINSTANCE hinst)
     InitRenderTargets(hmdDesc);
     //InitSceneGraph();
     //mLastUpdateClock = std::chrono::high_resolution_clock::now();
-    HANDLE hMapFile;
-    shared_buffer* comm_buffer;
+ 
 
-#if 1
-    hMapFile = CreateFileMapping(
-        INVALID_HANDLE_VALUE,    // use paging file
-        NULL,                    // default security
-        PAGE_READWRITE,          // read/write access
-        0,                       // maximum object size (high-order DWORD)
-        sizeof(shared_buffer) ,                // maximum object size (low-order DWORD)
-        L"Local\\oculus_steamvr_touch_controller_data_channel");                 // name of mapping object
-#else
-hMapFile = OpenFileMapping(
-    FILE_MAP_ALL_ACCESS,   // read/write access
-    FALSE,                 // do not inherit the name
-    L"Global\\oculus_steamvr_touch_controller_data_channel");               // name of mapping object
-#endif
-    if (hMapFile == NULL)
-    {
-        std::cout << "Could not open file mapping object " << GetLastError() << std::endl;
-        return;
-    }
-
-    comm_buffer = new(MapViewOfFile(hMapFile, // handle to map object
-        FILE_MAP_ALL_ACCESS,  // read/write permission
-        0,
-        0,
-        sizeof(shared_buffer)))shared_buffer();
-
-
-    if (comm_buffer == NULL)
-    {
-        std::cout << "Could not map view of file " << GetLastError() << std::endl;
-
-        CloseHandle(hMapFile);
-
-        return;
-    }
-    HANDLE comm_mutex = CreateMutex(0, true, L"Local\\oculus_steamvr_touch_controller_mutex");
-    //MessageBox(NULL, pBuf, TEXT("Process2"), MB_OK);
     
     WaitForSingleObject(
         comm_mutex,    // handle to mutex
@@ -205,13 +287,13 @@ hMapFile = OpenFileMapping(
     Render();
     uint64_t frame_count = 0;
     uint8_t buf[128] = { 0 };// , 255, 0, 0, 255, 255, 0, 0, 0, 0, 255, 255, 0, 0, 255, 255, 0, 0, 0, 0, 255, 255, 0, 0, 255, 255, 0, 0, 0, 0, 255, 255, 255, 255, 0, 0, 0, 0, 255, 255, 255, 255, 0, 0, 0, 0, 255, 255, 255, 255, 0, 0, 0, 0     };
-
+    unsigned int sizeof_buf = sizeof(buf);
     ovrHapticsBuffer vibuffer;
     vibuffer.Samples = buf;
-    vibuffer.SamplesCount = sizeof(buf);
+    vibuffer.SamplesCount = sizeof_buf;
     vibuffer.SubmitMode = ovrHapticsBufferSubmit_Enqueue;
 
-    for (int i = 0; i <( sizeof(buf)/* / 2*/); i++) {
+    for (int i = 0; i <(sizeof_buf/* / 2*/); i++) {
         buf[i/* *2*/] = 255;
     }
 
@@ -221,104 +303,11 @@ hMapFile = OpenFileMapping(
         ovr_GetSessionStatus(mSession, &sessionStatus);
         if (sessionStatus.ShouldQuit)
             break;
-        //if((counter &0xf)== 0 )   Render();
-        //counter++;
 
-        ovrTrackingState ss = ovr_GetTrackingState(mSession, 0, false);
-     
-        WaitForSingleObject(comm_mutex, INFINITE);
-        if (comm_buffer->vrEvent_type) {
-            std::cout << "VR Event 0x" << comm_buffer->vrEvent_type << std::endl;
-            comm_buffer->vrEvent_type = 0;
-        }
-        for (int i = 0; i < 2; i++) {
-
-            ovrInputState inputState;
-            ovrResult input_res;
-            if (i == 1) {
-                input_res = ovr_GetInputState(mSession, ovrControllerType::ovrControllerType_RTouch, &inputState);
-                comm_buffer->input_state.Buttons &= ~ovrButton_RMask;
-                comm_buffer->input_state.Buttons |= (ovrButton_RMask & inputState.Buttons);
-                comm_buffer->input_state.Touches &= ~(ovrTouch_RButtonMask | ovrTouch_RPoseMask);
-                comm_buffer->input_state.Touches |= ((ovrTouch_RButtonMask | ovrTouch_RPoseMask)& inputState.Touches);
-            }
-            else {
-                input_res = ovr_GetInputState(mSession, ovrControllerType::ovrControllerType_LTouch, &inputState);
-                comm_buffer->input_state.Buttons &= ~ovrButton_LMask;
-                comm_buffer->input_state.Buttons |= (ovrButton_LMask & inputState.Buttons);
-                comm_buffer->input_state.Touches &= ~(ovrTouch_LButtonMask | ovrTouch_LPoseMask);
-                comm_buffer->input_state.Touches |= ((ovrTouch_LButtonMask | ovrTouch_LPoseMask) & inputState.Touches);
-            }
-            comm_buffer->input_state.HandTrigger[i] = inputState.HandTrigger[i];
-            comm_buffer->input_state.IndexTrigger[i] = inputState.IndexTrigger[i];
-            comm_buffer->input_state.Thumbstick[i] = inputState.Thumbstick[i];
-
-            if (comm_buffer->vib_valid[i]) {
-                printf("vib[%u] dur %f | freq %f | amp %f\n", i, comm_buffer->vib_duration_s[i], comm_buffer->vib_frequency[i], comm_buffer->vib_amplitude[i] );
-                int duration = comm_buffer->vib_duration_s[i] * 320;
-                if (duration > 128) duration = 128;
-                if (duration < 2) duration = 2;
-                vibuffer.SamplesCount = duration;
-#ifndef MAX_HAPTICS                
-                uint32_t ratio = 1;
-                if (comm_buffer->vib_frequency[i] > 80/*300*/) {
-                    ratio = 4;
-                } else if (comm_buffer->vib_frequency[i] > 66/*230*/) {
-                    ratio = 3;
-                } else if (comm_buffer->vib_frequency[i] > 40/*160*/) {
-                    ratio = 2;
-                } else {
-                    ratio = 1;
-                }
-                for (int j = 0; j < duration; j++) {                    
-                    if ((j & 3) < ratio) {
-                        float v = /*(0.5f +*/ (comm_buffer->vib_amplitude[i] /** 0.55f)*/) * 255.0f;
-                        uint8_t vb=v;
-                        if (v > 255.0f) vb = 255;
-                        else if (v < 0.5f) vb = 255 / 2;
-                        
-                        buf[j] = vb; //(comm_buffer->vib_amplitude[i] < 0.5000001) ? 127 : 255;
-                    } else {
-                        buf[j] = 0;
-                    }
-                }
-#endif
-                ovr_SubmitControllerVibration(mSession, ((i>0) ? ovrControllerType_RTouch : ovrControllerType_LTouch), &vibuffer);
-                comm_buffer->vib_valid[i] = 0;
-                for (int j = 0; j < (sizeof(buf)/* / 2*/); j++) {
-                    buf[j/* *2*/] = 255;
-                }
-
-               if (0) {
-                    float v = (0.5f + (comm_buffer->vib_amplitude[i] * 0.55f)) * 255.0f;
-                    uint8_t vb = v;
-                    if (v > 255.0f) vb = 255;
-                    else if (v < 0.5) vb = 255 / 2;
-                    std::cout << " BUZZ " << i << " : " << comm_buffer->vib_amplitude[i] << " " << comm_buffer->vib_duration_s[i] << "s " << comm_buffer->vib_frequency[i] << "Hz " << (uint32_t)vb<< " : " << v << " amplitude mapping, ratio = " << ratio << std::endl;
-                }
-            }
-            ReleaseMutex(comm_mutex);
-            if ((frame_count & 0x7FF) == 0) {
-                std::cout.precision(4);
-
-                std::cout << (i == 0 ? "lhand" : "rhand") << " 0x" << std::fixed <<
-                    std::hex << ss.HandStatusFlags[i] << " x " <<
-                    ss.HandPoses[i].ThePose.Position.x << " y " <<
-                    ss.HandPoses[i].ThePose.Position.y << " z " <<
-                    ss.HandPoses[i].ThePose.Position.z << " button 0x" << inputState.Buttons << " touch 0x" << inputState.Touches << " g|t " << inputState.HandTrigger[i] <<"|"<<inputState.IndexTrigger[i] << " res 0x" << input_res;
-                //ovr_SetControllerVibration(mSession, i ? ovrControllerType_RTouch : ovrControllerType_LTouch, 1, 255);
-                //std::cout << " " << 
-                Render();
-
-                //ovrErrorInfo errorInfo;
-               // ovr_GetLastErrorInfo(&errorInfo);
-               // std::cout << " " << errorInfo.ErrorString;
-               /* if (i == 0) {
-                    std::cout << " : ";
-                }else{ */
-                        std::cout << std::endl;
-                /*} */
-            }
+        main_loop(mSession, comm_mutex, comm_buffer, frame_count, vibuffer, buf, sizeof_buf);
+        
+        if ((frame_count & 0xF) == 0) { // 1000/16 ~= 60Hz, render black frame at 60fps to keep oculus happy
+            Render();
         }
 
         frame_count++;
@@ -327,10 +316,6 @@ hMapFile = OpenFileMapping(
     }
 
     ovr_Shutdown();
-    UnmapViewOfFile(comm_buffer);
-
-    CloseHandle(hMapFile);
-    CloseHandle(comm_mutex);
 }
 
 
@@ -385,24 +370,14 @@ void GuardianSystemDemo::Render()
     }
 }
 
+void vibration_thread(ovrSession mSession);
 
-
-
-
-int main( int argc, char** argsv)
-{
-    std::cout << "Hello World! "<<argc<<std::endl;
-#if 0
-    GuardianSystemDemo* instance = new (_aligned_malloc(sizeof(GuardianSystemDemo), 16)) GuardianSystemDemo();
-    instance->Start(0);
-    delete instance;
-    return 0;
-#endif
+void no_graphics_start(shared_buffer* comm_buffer, HANDLE comm_mutex) {
     ovrSession mSession = nullptr;
-  //  ovrSession hmd2 = nullptr;
+    //  ovrSession hmd2 = nullptr;
     ovrGraphicsLuid luid{};
-  //  ovrGraphicsLuid luid2{};
-    ovrInitParams initParams = { ovrInit_RequestVersion | ovrInit_FocusAware | ((argc>1)?0:ovrInit_Invisible), OVR_MINOR_VERSION, NULL, 0, 0 };
+    //  ovrGraphicsLuid luid2{};
+    ovrInitParams initParams = { ovrInit_RequestVersion | ovrInit_FocusAware | ovrInit_Invisible, OVR_MINOR_VERSION, NULL, 0, 0 };
     /*ovrResult result = ovr_Initialize(&initParams);   */
     if (!mSession) {
 #if 0
@@ -416,15 +391,68 @@ int main( int argc, char** argsv)
 
         if (OVR_FAILURE(ovr_SetTrackingOriginType(mSession, ovrTrackingOrigin_FloorLevel)))  std::cout << "ovr_SetTrackingOriginType error" << std::endl;
     }
-    if (argc > 1) {
-        while (1)
-            Sleep(1000);
-        return 0;
+
+    std::thread vib_thread(vibration_thread, mSession);
+    //vibration_thread(mSession);
+
+    // Main Loop
+    uint64_t counter = 0;
+    uint64_t frame_count = 0;
+    uint8_t buf[128] = { 0 };
+    unsigned int sizeof_buf = sizeof(buf);
+    // , 255, 0, 0, 255, 255, 0, 0, 0, 0, 255, 255, 0, 0, 255, 255, 0, 0, 0, 0, 255, 255, 0, 0, 255, 255, 0, 0, 0, 0, 255, 255, 255, 255, 0, 0, 0, 0, 255, 255, 255, 255, 0, 0, 0, 0, 255, 255, 255, 255, 0, 0, 0, 0     };
+
+    ovrHapticsBuffer vibuffer;
+    vibuffer.Samples = buf;
+    vibuffer.SamplesCount = sizeof_buf;
+    vibuffer.SubmitMode = ovrHapticsBufferSubmit_Enqueue;
+
+    for (int i = 0; i < (sizeof_buf); i++) {
+        buf[i] = 255;
     }
+
+    //ovr_RecenterTrackingOrigin(hmd);
+    while (1) {
+
+
+        ovrSessionStatus sessionStatus;
+        ovr_GetSessionStatus(mSession, &sessionStatus);
+        if (sessionStatus.ShouldQuit)
+            break;
+        //if((counter &0xf)== 0 )   Render();
+        //counter++;
+
+        main_loop(mSession, comm_mutex, comm_buffer, frame_count, vibuffer, buf, sizeof_buf);
+
+        frame_count++;
+        Sleep(1);
+    }
+    ovr_Destroy(mSession);
+    ovr_Shutdown();
+}
+
+
+int main(int argc, char** argsv)
+{
+    std::cout << "Welcome to oculus_touch_link, this program provides the input and haptic link to the stream driver, as well as passing confuguration data" << std::endl;
+    std::cout << "You can provide this program with arguments to specify:" << std::endl;
+    std::cout << "Render to Oculus headset y/n  (\"n\" must be use with ovr_dummy.exe)" << std::endl;
+    std::cout << "VR \"Universe\" ID, 0=Invalid, 1=Oculus, 31=Recommended with VirtualDesktop/ALVR" << std::endl;
+    std::cout << "Manufacturer name: Oculus or Oculus_link (or HTC for trackers)" << std::endl;
+    std::cout << "Tracking system name: oculus or oculus_link (or lighthouse for trackers)" << std::endl;
+    std::cout << "perform tracking prediction manually in-driver (n= ask oculus do the prediction) y/n" << std::endl;
+    std::cout << "Extra prediction time (ms) for example 11.1 for 1 frame at 90fps" << std::endl;
+    std::cout << "All controllers are tracked objects y/n" << std::endl;
+    std::cout << "" << std::endl;
+    std::cout << "This program is super dumb and expects all of the arguments or none (for defaults), suggested invocations:" << std::endl;
+    std::cout << "ovr_test.exe n 1 Oculus oculus n 10 n(must be use with ovr_dummy.exe)" << std::endl;
+    std::cout << "ovr_test.exe y 1 Oculus oculus y 10 n" << std::endl;
+    std::cout << "ovr_test.exe y 31 Oculus_link oculus_link n 10 n" << std::endl;
+    std::cout << "ovr_test.exe n 31 Oculus_link oculus_link n 10 n(default)" << std::endl;
+
 
     HANDLE hMapFile;
     shared_buffer* comm_buffer;
-
 #if 1
     hMapFile = CreateFileMapping(
         INVALID_HANDLE_VALUE,    // use paging file
@@ -460,6 +488,28 @@ int main( int argc, char** argsv)
 
         return -1;
     }
+    comm_buffer->logging_offset = 0;
+    bool do_rendering = false;
+    if (argc < 6) {
+        std::cout << " <7 arguments, using defaults: y 31 Oculus_link oculus_link y 5 n" << std::endl;
+        do_rendering = false;
+        comm_buffer->vr_universe = 31;
+        strncpy_s(comm_buffer->manufacturer_name, "Oculus_link", 127);
+        strncpy_s(comm_buffer->tracking_space_name, "oculus_link", 127);
+        comm_buffer->perform_prediction = false;
+        comm_buffer->be_objects = false;
+        comm_buffer->extra_prediction_ms = 5.0f;
+    }
+    else {
+        do_rendering = (std::string(argsv[1]) == "y");
+        comm_buffer->vr_universe = atoi(argsv[2]);
+        strncpy_s(comm_buffer->manufacturer_name, argsv[3], 127);
+        strncpy_s(comm_buffer->tracking_space_name, argsv[4], 127);
+        comm_buffer->perform_prediction = (std::string(argsv[5]) == "y");
+        comm_buffer->extra_prediction_ms = atof(argsv[6]);
+        comm_buffer->be_objects = (std::string(argsv[7]) == "y");
+    }
+
     HANDLE comm_mutex = CreateMutex(0, true, L"Local\\oculus_steamvr_touch_controller_mutex");
     //MessageBox(NULL, pBuf, TEXT("Process2"), MB_OK);
 
@@ -468,146 +518,126 @@ int main( int argc, char** argsv)
         INFINITE);  // no time-out interval
     ReleaseMutex(comm_mutex);
 
-    // Main Loop
-    uint64_t counter = 0;
-    uint64_t frame_count = 0;
-    uint8_t buf[128] = { 0 };// , 255, 0, 0, 255, 255, 0, 0, 0, 0, 255, 255, 0, 0, 255, 255, 0, 0, 0, 0, 255, 255, 0, 0, 255, 255, 0, 0, 0, 0, 255, 255, 255, 255, 0, 0, 0, 0, 255, 255, 255, 255, 0, 0, 0, 0, 255, 255, 255, 255, 0, 0, 0, 0     };
 
-    ovrHapticsBuffer vibuffer;
-    vibuffer.Samples = buf;
-    vibuffer.SamplesCount = sizeof(buf);
-    vibuffer.SubmitMode = ovrHapticsBufferSubmit_Enqueue;
+    if (do_rendering) {
+        GuardianSystemDemo* instance = new (_aligned_malloc(sizeof(GuardianSystemDemo), 16)) GuardianSystemDemo();
+        instance->Start(0, comm_buffer, comm_mutex);
+        delete instance;
 
-    for (int i = 0; i < (sizeof(buf)/* / 2*/); i++) {
-        buf[i/* *2*/] = 255;
+    } else {
+        no_graphics_start(comm_buffer, comm_mutex);
     }
+     UnmapViewOfFile(comm_buffer);
 
-    //ovr_RecenterTrackingOrigin(hmd);
-    while (1) {
+     CloseHandle(hMapFile);
+     CloseHandle(comm_mutex);
+     return 0;
+}
 
 
-        ovrSessionStatus sessionStatus;
-        ovr_GetSessionStatus(mSession, &sessionStatus);
-        if (sessionStatus.ShouldQuit)
-            break;
-        //if((counter &0xf)== 0 )   Render();
-        //counter++;
 
-        ovrTrackingState ss = ovr_GetTrackingState(mSession, 0, false);
+void add_vib_sample(bool isRightHand, uint8_t sample, uint32_t offset);
+std::vector<uint8_t> pulse_patterns[17] = {
+    {},
+    {255},
+    {255,0},
+    {},
+    {196,255,128,0},
+    {},
+    {196,255,196,128,0,0,0},
+    {},
+    {128,255,255,128,64,0,0,0},
+    {},
+    {128,255,255,196,128,0,0,0,0,0},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {64,128,196,255,255,128,64,32,0,0,0,0,0,0,0,0}
+};
 
-        WaitForSingleObject(comm_mutex, INFINITE);
-        if (comm_buffer->vrEvent_type) {
-            std::cout << "VR Event 0x" << comm_buffer->vrEvent_type << std::endl;
-            comm_buffer->vrEvent_type = 0;
-        }
-        for (int i = 0; i < 2; i++) {
+void add_vibration(bool isRightHand, float amplitude, float frequency, float duration) {
 
-            ovrInputState inputState;
-            ovrResult input_res;
-            if (i == 1) {
-                input_res = ovr_GetInputState(mSession, ovrControllerType::ovrControllerType_RTouch, &inputState);
-                comm_buffer->input_state.Buttons &= ~ovrButton_RMask;
-                comm_buffer->input_state.Buttons |= (ovrButton_RMask & inputState.Buttons);
-                comm_buffer->input_state.Touches &= ~(ovrTouch_RButtonMask | ovrTouch_RPoseMask);
-                comm_buffer->input_state.Touches |= ((ovrTouch_RButtonMask | ovrTouch_RPoseMask) & inputState.Touches);
-            }
-            else {
-                input_res = ovr_GetInputState(mSession, ovrControllerType::ovrControllerType_LTouch, &inputState);
-                comm_buffer->input_state.Buttons &= ~ovrButton_LMask;
-                comm_buffer->input_state.Buttons |= (ovrButton_LMask & inputState.Buttons);
-                comm_buffer->input_state.Touches &= ~(ovrTouch_LButtonMask | ovrTouch_LPoseMask);
-                comm_buffer->input_state.Touches |= ((ovrTouch_LButtonMask | ovrTouch_LPoseMask) & inputState.Touches);
-            }
-            comm_buffer->input_state.HandTrigger[i] = inputState.HandTrigger[i];
-            comm_buffer->input_state.IndexTrigger[i] = inputState.IndexTrigger[i];
-            comm_buffer->input_state.Thumbstick[i] = inputState.Thumbstick[i];
-
-            if (comm_buffer->vib_valid[i]) {
-                //printf("vib[%u] dur %f=%f | freq %f | amp %f\n", i, comm_buffer->vib_duration_s[i], comm_buffer->vib_duration_s[i]*320, comm_buffer->vib_frequency[i], comm_buffer->vib_amplitude[i]);
-
-                int duration = comm_buffer->vib_duration_s[i] * 320;
-                if (duration > 128) duration = 128;
-                if (duration < 2) duration = 2;
-                vibuffer.SamplesCount = duration;
-#ifndef MAX_HAPTICS                
-                uint32_t ratio = 1;
-                if (comm_buffer->vib_frequency[i] > 80/*300*/) {
-                    ratio = 4;
-                }
-                else if (comm_buffer->vib_frequency[i] > 66/*230*/) {
-                    ratio = 3;
-                }
-                else if (comm_buffer->vib_frequency[i] > 40/*160*/) {
-                    ratio = 2;
-                }
-                else {
-                    ratio = 1;
-                }
-                for (int j = 0; j < duration; j++) {
-                    if ((j & 3) < ratio) {
-                        float v = (0.1f + (comm_buffer->vib_amplitude[i] * 0.9f)) * 255.0f;
-                        uint8_t vb = v;
-                        if (v > 255.0f) vb = 255;
-                        else if (v < 0.1f) vb = 256 / 10;
-
-                        buf[j] = vb; //(comm_buffer->vib_amplitude[i] < 0.5000001) ? 127 : 255;
-                    }
-                    else {
-                        buf[j] = 0;
-                    }
-                }
-#endif
-                ovr_SubmitControllerVibration(mSession, (i > 0) ? ovrControllerType_RTouch : ovrControllerType_LTouch, &vibuffer);
-                comm_buffer->vib_valid[i] = 0;
-                for (int j = 0; j < (sizeof(buf)/* / 2*/); j++) {
-                    buf[j/* *2*/] = 255;
-                }
-                if (0) {
-                    float v = (0.5f + (comm_buffer->vib_amplitude[i] * 0.55f)) * 255.0f;
-                    uint8_t vb = v;
-                    if (v > 255.0f) vb = 255;
-                    else if (v < 0.5) vb = 255 / 2;
-                    std::cout << " BUZZ " << i << " : " << comm_buffer->vib_amplitude[i] << " " << comm_buffer->vib_duration_s[i] << "s " << comm_buffer->vib_frequency[i] << "Hz " << (uint32_t)vb << " : " << v << " amplitude mapping, ratio = " << ratio << std::endl;
-                }
-            }
-            ReleaseMutex(comm_mutex);
-            if ((frame_count & 0x7FF) == 0) {
-                std::cout.precision(4);
-
-                std::cout << (i == 0 ? "lhand" : "rhand") << " 0x" << std::fixed <<
-                    std::hex << ss.HandStatusFlags[i] << " x " <<
-                    ss.HandPoses[i].ThePose.Position.x << " y " <<
-                    ss.HandPoses[i].ThePose.Position.y << " z " <<
-                    ss.HandPoses[i].ThePose.Position.z << " button 0x" << inputState.Buttons << " touch 0x" << inputState.Touches << " g|t " << inputState.HandTrigger[i] << "|" << inputState.IndexTrigger[i] << " res 0x" << input_res;
-                //ovr_SetControllerVibration(mSession, i ? ovrControllerType_RTouch : ovrControllerType_LTouch, 1, 255);
-                //std::cout << " " << 
+    std::cout << " adding haptic for amplitude " << amplitude << " frequency " << frequency << " duration " << duration << std::endl;
+    float amp = amplitude/100.0f;
+    float freq = frequency * 320.0f;
+    if (amplitude >= 100.0f) amp = 1.0f;
+    if (amp < 64.0/256) amp = 64.0/256;
+    uint32_t requested_duration = duration * 320; // 320 Hz processing rate
+    uint32_t min_duration = 1;
+    uint32_t pulse_width = 1;
+    if (freq < 160) {
+        min_duration = 2;
+        pulse_width = 1;
+    }
+    if (freq < 80) {
+        min_duration = 4;
+        pulse_width = 2;
+    }
+    if (freq < 60) {
+        min_duration = 6;
+        pulse_width = 3;
+    }
+    if (freq < 40) {
+        min_duration = 8;
+        pulse_width = 4;
+    }
+    if (freq < 32) {
+        min_duration = 10;
+        pulse_width = 5;
+    }
+    if (freq < 20) {
+        min_duration = 16;
+        pulse_width = 8;
+    }
   
-                //ovrErrorInfo errorInfo;
-               // ovr_GetLastErrorInfo(&errorInfo);
-               // std::cout << " " << errorInfo.ErrorString;
-               /* if (i == 0) {
-                    std::cout << " : ";
-                }else{ */
-                std::cout << std::endl;
-                /*} */
-            }
-        }
+    if (min_duration > requested_duration) requested_duration = min_duration;
 
-        frame_count++;
-        Sleep(1);
+    std::cout << " adding haptic for amplitude " << amplitude << " -> " << amp << " frequency " << frequency << " -> " << freq << " duration " << duration << " ->" << requested_duration
+        <<" pulse_width " << pulse_width << std::endl;
+  
+    uint64_t vib_buffer_sample_delta = ((ovr_GetTimeInSeconds() - vib_buf_time) * 320);
+    for (int i = 0; i < requested_duration; i++) {
+        add_vib_sample(isRightHand, pulse_patterns[min_duration][(future_vib_buffer_index + vib_buffer_sample_delta + i) % min_duration] * amp, i + vib_buffer_sample_delta);
     }
-    ovr_Destroy(mSession);
-    ovr_Shutdown();
 
 }
 
-// Run program: Ctrl + F5 or Debug > Start Without Debugging menu
-// Debug program: F5 or Debug > Start Debugging menu
+void add_vib_sample(bool isRightHand, uint8_t sample, uint32_t offset) {
+    future_vib_buffer[isRightHand][(future_vib_buffer_index + offset)%1024] = sample;
+}
 
-// Tips for Getting Started: 
-//   1. Use the Solution Explorer window to add/manage files
-//   2. Use the Team Explorer window to connect to source control
-//   3. Use the Output window to see build output and other messages
-//   4. Use the Error List window to view errors
-//   5. Go to Project > Add New Item to create new code files, or Project > Add Existing Item to add existing code files to the project
-//   6. In the future, to open this project again, go to File > Open > Project and select the .sln file
+void vibration_thread(ovrSession mSession) {
+    unsigned char buf[8];
+    ovrHapticsBuffer vibuffer;
+    vibuffer.SamplesCount = 8;
+    vibuffer.Samples = buf;
+    vibuffer.SubmitMode = ovrHapticsBufferSubmit_Enqueue;
+    uint64_t counter = 0;
+    while (1) {
+
+        Sleep(1000/40);
+        for (int hand = 0; hand < 2; hand++) {
+            for (int i = 0; i < 8; i++) {
+                buf[i] = future_vib_buffer[hand][future_vib_buffer_index + i];
+                future_vib_buffer[hand][future_vib_buffer_index + i] = 0;
+            }
+            ovrTouchHapticsDesc desc = ovr_GetTouchHapticsDesc(mSession, (hand==0)?ovrControllerType_LTouch: ovrControllerType_RTouch);
+            //std::cout << "SampleRate " << desc.SampleRateHz << " SampleSize " << desc.SampleSizeInBytes << " MaxSamples " << desc.SubmitMaxSamples << " MinSamples " << desc.SubmitMinSamples << " OptimalSamples " << desc.SubmitOptimalSamples << std::endl;
+
+            ovrHapticsPlaybackState pbState;
+            ovr_GetControllerVibrationState(mSession, (hand == 0) ? ovrControllerType_LTouch : ovrControllerType_RTouch, &pbState);
+            //std::cout << (counter & 0xff) << " - queue state before  space: " << pbState.RemainingQueueSpace << "   samples: " << pbState.SamplesQueued << " / " << desc.QueueMinSizeToAvoidStarvation << std::endl;
+            ovr_SubmitControllerVibration(mSession, (hand == 0) ? ovrControllerType_LTouch : ovrControllerType_RTouch, &vibuffer);
+            ovr_GetControllerVibrationState(mSession, (hand == 0) ? ovrControllerType_LTouch : ovrControllerType_RTouch, &pbState);
+
+            //std::cout << (counter & 0xff) << " - queue state after   space: " << pbState.RemainingQueueSpace << "   samples: " << pbState.SamplesQueued << " / " << desc.QueueMinSizeToAvoidStarvation << std::endl;
+        }
+        future_vib_buffer_index+=8;
+        vib_buf_time = ovr_GetTimeInSeconds();
+        if (future_vib_buffer_index >= 1024)future_vib_buffer_index = 0;
+        counter++;
+
+    }
+}
