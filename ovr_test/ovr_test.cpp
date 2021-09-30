@@ -490,7 +490,7 @@ int main(int argc, char** argsv)
     }
     comm_buffer->logging_offset = 0;
     bool do_rendering = false;
-    if (argc < 6) {
+    if (argc < 7) {
         std::cout << " <7 arguments, using defaults: y 31 Oculus_link oculus_link y 5 n" << std::endl;
         do_rendering = false;
         comm_buffer->vr_universe = 31;
@@ -498,7 +498,7 @@ int main(int argc, char** argsv)
         strncpy_s(comm_buffer->tracking_space_name, "oculus_link", 127);
         comm_buffer->perform_prediction = false;
         comm_buffer->be_objects = false;
-        comm_buffer->extra_prediction_ms = -10.0f;
+        comm_buffer->extra_prediction_ms = 11.0f;
     }
     else {
         do_rendering = (std::string(argsv[1]) == "y");
@@ -506,7 +506,7 @@ int main(int argc, char** argsv)
         strncpy_s(comm_buffer->manufacturer_name, argsv[3], 127);
         strncpy_s(comm_buffer->tracking_space_name, argsv[4], 127);
         comm_buffer->perform_prediction = (std::string(argsv[5]) == "y");
-        comm_buffer->extra_prediction_ms = -atof(argsv[6]);
+        comm_buffer->extra_prediction_ms = atof(argsv[6]);
         comm_buffer->be_objects = (std::string(argsv[7]) == "y");
     }
 

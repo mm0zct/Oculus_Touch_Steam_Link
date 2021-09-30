@@ -817,9 +817,9 @@ public:                                                                         
     {
 
         ovrTrackingState ss = ovr_GetTrackingState(mSession,
-            ((comm_buffer->perform_prediction)?0.0:ovr_GetTimeInSeconds()) + (comm_buffer->extra_prediction_ms * 0.001),
+            (comm_buffer->perform_prediction)?0.0:(ovr_GetTimeInSeconds() + (comm_buffer->extra_prediction_ms * 0.001)),
             ovrTrue);
-        m_time_of_last_pose = ss.HandPoses[isRightHand].TimeInSeconds;
+        m_time_of_last_pose = ovr_GetTimeInSeconds();// ss.HandPoses[isRightHand].TimeInSeconds;
         float delta_t = (comm_buffer->extra_prediction_ms*0.001f) + (ovr_GetTimeInSeconds() - ss.HandPoses[isRightHand].TimeInSeconds);
         DriverPose_t pose = { 0 };
         pose.poseIsValid = true;
