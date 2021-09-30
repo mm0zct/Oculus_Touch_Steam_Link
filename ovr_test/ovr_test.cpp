@@ -498,7 +498,7 @@ int main(int argc, char** argsv)
         strncpy_s(comm_buffer->tracking_space_name, "oculus_link", 127);
         comm_buffer->perform_prediction = false;
         comm_buffer->be_objects = false;
-        comm_buffer->extra_prediction_ms = 5.0f;
+        comm_buffer->extra_prediction_ms = -10.0f;
     }
     else {
         do_rendering = (std::string(argsv[1]) == "y");
@@ -506,7 +506,7 @@ int main(int argc, char** argsv)
         strncpy_s(comm_buffer->manufacturer_name, argsv[3], 127);
         strncpy_s(comm_buffer->tracking_space_name, argsv[4], 127);
         comm_buffer->perform_prediction = (std::string(argsv[5]) == "y");
-        comm_buffer->extra_prediction_ms = atof(argsv[6]);
+        comm_buffer->extra_prediction_ms = -atof(argsv[6]);
         comm_buffer->be_objects = (std::string(argsv[7]) == "y");
     }
 
@@ -559,7 +559,7 @@ std::vector<uint8_t> pulse_patterns[17] = {
 
 void add_vibration(bool isRightHand, float amplitude, float frequency, float duration) {
 
-    std::cout << " adding haptic for amplitude " << amplitude << " frequency " << frequency << " duration " << duration << std::endl;
+   // std::cout << " adding haptic for amplitude " << amplitude << " frequency " << frequency << " duration " << duration << std::endl;
     float amp = amplitude/100.0f;
     float freq = frequency * 320.0f;
     if (amplitude >= 100.0f) amp = 1.0f;
@@ -594,8 +594,8 @@ void add_vibration(bool isRightHand, float amplitude, float frequency, float dur
   
     if (min_duration > requested_duration) requested_duration = min_duration;
 
-    std::cout << " adding haptic for amplitude " << amplitude << " -> " << amp << " frequency " << frequency << " -> " << freq << " duration " << duration << " ->" << requested_duration
-        <<" pulse_width " << pulse_width << std::endl;
+  //  std::cout << " adding haptic for amplitude " << amplitude << " -> " << amp << " frequency " << frequency << " -> " << freq << " duration " << duration << " ->" << requested_duration
+    //    <<" pulse_width " << pulse_width << std::endl;
   
     uint64_t vib_buffer_sample_delta = ((ovr_GetTimeInSeconds() - vib_buf_time) * 320);
     for (int i = 0; i < requested_duration; i++) {
