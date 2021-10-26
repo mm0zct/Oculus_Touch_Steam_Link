@@ -33,6 +33,8 @@ struct shared_buffer {
     char manufacturer_name[128]; //Oculus or Oculus_link
     char logging_buffer[1024];
     uint64_t logging_offset;
+    bool external_tracking;
+    ovrTrackingState tracking_state;
 };
 
 DirectX11 DIRECTX;
@@ -58,6 +60,11 @@ void main_loop(ovrSession mSession, HANDLE comm_mutex, shared_buffer* comm_buffe
         //std::cout << "VR Event 0x" << comm_buffer->vrEvent_type << std::endl;
         comm_buffer->vrEvent_type = 0;
     }
+
+    if (comm_buffer->external_tracking) {
+        comm_buffer->tracking_state = ovr_GetTrackingState(mSession, (ovr_GetTimeInSeconds() + (comm_buffer->extra_prediction_ms * 0.001)), ovrTrue);
+    }
+
     for (int i = 0; i < 2; i++) {
 
         ovrInputState inputState;
@@ -442,13 +449,14 @@ int main(int argc, char** argsv)
     std::cout << "Tracking system name: oculus or oculus_link (or lighthouse for trackers)" << std::endl;
     std::cout << "perform tracking prediction manually in-driver (n= ask oculus do the prediction) y/n" << std::endl;
     std::cout << "Extra prediction time (ms) for example 11.1 for 1 frame at 90fps" << std::endl;
-    std::cout << "All controllers are tracked objects y/n" << std::endl;
+    std::cout << "All controllers are tracked objects instead of controllers y/n" << std::endl;
+    std::cout << "Perform tracking in ovr_test instead of steamvr driver y/n" << std::endl;
     std::cout << "" << std::endl;
     std::cout << "This program is super dumb and expects all of the arguments or none (for defaults), suggested invocations:" << std::endl;
-    std::cout << "ovr_test.exe n 1 Oculus oculus n 10 n(must be use with ovr_dummy.exe)" << std::endl;
-    std::cout << "ovr_test.exe y 1 Oculus oculus y 10 n" << std::endl;
-    std::cout << "ovr_test.exe y 31 Oculus_link oculus_link n 10 n" << std::endl;
-    std::cout << "ovr_test.exe n 31 Oculus_link oculus_link n 10 n(default)" << std::endl;
+    std::cout << "ovr_test.exe n 1 Oculus oculus n 10 n n(must be use with ovr_dummy.exe)" << std::endl;
+    std::cout << "ovr_test.exe y 1 Oculus oculus y 10 n n" << std::endl;
+    std::cout << "ovr_test.exe y 31 Oculus_link oculus_link n 10 n y" << std::endl;
+    std::cout << "ovr_test.exe n 31 Oculus_link oculus_link n 10 n n(default)" << std::endl;
 
 
     HANDLE hMapFile;
@@ -490,15 +498,16 @@ int main(int argc, char** argsv)
     }
     comm_buffer->logging_offset = 0;
     bool do_rendering = false;
-    if (argc < 7) {
-        std::cout << " <7 arguments, using defaults: y 31 Oculus_link oculus_link y 5 n" << std::endl;
+    if (argc < 8) {
+        std::cout << " <8 arguments, using defaults: y 31 Oculus_link oculus_link y 5 n" << std::endl;
         do_rendering = false;
         comm_buffer->vr_universe = 31;
         strncpy_s(comm_buffer->manufacturer_name, "Oculus_link", 127);
         strncpy_s(comm_buffer->tracking_space_name, "oculus_link", 127);
         comm_buffer->perform_prediction = false;
-        comm_buffer->be_objects = false;
         comm_buffer->extra_prediction_ms = 11.0f;
+        comm_buffer->be_objects = false;
+        comm_buffer->external_tracking = false;
     }
     else {
         do_rendering = (std::string(argsv[1]) == "y");
@@ -508,6 +517,7 @@ int main(int argc, char** argsv)
         comm_buffer->perform_prediction = (std::string(argsv[5]) == "y");
         comm_buffer->extra_prediction_ms = atof(argsv[6]);
         comm_buffer->be_objects = (std::string(argsv[7]) == "y");
+        comm_buffer->external_tracking = (std::string(argsv[8]) == "y");;
     }
 
     HANDLE comm_mutex = CreateMutex(0, true, L"Local\\oculus_steamvr_touch_controller_mutex");
@@ -546,9 +556,9 @@ std::vector<uint8_t> pulse_patterns[17] = {
     {},
     {196,255,196,128,0,0,0},
     {},
-    {128,255,255,128,64,0,0,0},
+    {196,255,255,128,64,0,0,0},
     {},
-    {128,255,255,196,128,0,0,0,0,0},
+    {196,255,255,196,128,0,0,0,0,0},
     {},
     {},
     {},
@@ -563,7 +573,7 @@ void add_vibration(bool isRightHand, float amplitude, float frequency, float dur
     float amp = amplitude/100.0f;
     float freq = frequency * 320.0f;
     if (amplitude >= 100.0f) amp = 1.0f;
-    if (amp < 64.0/256) amp = 64.0/256;
+    if (amp < 96.0/256) amp = 96.0/256;
     uint32_t requested_duration = duration * 320; // 320 Hz processing rate
     uint32_t min_duration = 1;
     uint32_t pulse_width = 1;

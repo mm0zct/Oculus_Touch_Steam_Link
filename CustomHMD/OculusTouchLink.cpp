@@ -63,6 +63,8 @@ struct shared_buffer {
     char manufacturer_name[128]; //Oculus or Oculus_link
     char logging_buffer[1024];
     uint64_t logging_offset;
+    bool external_tracking;
+    ovrTrackingState tracking_state;
 };
 
 
@@ -815,10 +817,15 @@ public:                                                                         
     }
     virtual DriverPose_t CalculatePose()
     {
-
-        ovrTrackingState ss = ovr_GetTrackingState(mSession,
-            (comm_buffer->perform_prediction)?0.0:(ovr_GetTimeInSeconds() + (comm_buffer->extra_prediction_ms * 0.001)),
-            ovrTrue);
+        ovrTrackingState ss;
+        if (comm_buffer->external_tracking) {
+            ss = comm_buffer->tracking_state;
+        }
+        else {
+            ss = ovr_GetTrackingState(mSession,
+                (comm_buffer->perform_prediction) ? 0.0 : (ovr_GetTimeInSeconds() + (comm_buffer->extra_prediction_ms * 0.001)),
+                ovrTrue);
+        }
         m_time_of_last_pose = ovr_GetTimeInSeconds();// ss.HandPoses[isRightHand].TimeInSeconds;
         float delta_t = (comm_buffer->extra_prediction_ms*0.001f) + (ovr_GetTimeInSeconds() - ss.HandPoses[isRightHand].TimeInSeconds);
         DriverPose_t pose = { 0 };
