@@ -569,7 +569,8 @@ std::vector<uint8_t> pulse_patterns[17] = {
 
 void add_vibration(bool isRightHand, float amplitude, float frequency, float duration) {
 
-   // std::cout << " adding haptic for amplitude " << amplitude << " frequency " << frequency << " duration " << duration << std::endl;
+    std::cout << " adding haptic for amplitude " << amplitude << " frequency " << frequency << " duration " << duration << std::endl;
+    if (duration < 0) return;
     float amp = amplitude/100.0f;
     float freq = frequency * 320.0f;
     if (amplitude >= 100.0f) amp = 1.0f;
