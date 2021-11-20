@@ -35,12 +35,14 @@ struct shared_buffer {
     uint64_t logging_offset;
     bool external_tracking;
     ovrTrackingState tracking_state;
+    uint32_t num_objects;
+    ovrPoseStatef object_poses[4];
 };
 
 DirectX11 DIRECTX;
 
-uint32_t future_vib_buffer_index = 0;
-double vib_buf_time = 0;
+uint32_t future_vib_buffer_index[2] = { 0 };
+double vib_buf_time[2] = { 0 };
 //uint8_t future_vib_buffer[1024] = { 0 };
 uint8_t future_vib_buffer[2][1024] = { {0},{0} };
 
@@ -63,6 +65,16 @@ void main_loop(ovrSession mSession, HANDLE comm_mutex, shared_buffer* comm_buffe
 
     if (comm_buffer->external_tracking) {
         comm_buffer->tracking_state = ovr_GetTrackingState(mSession, (ovr_GetTimeInSeconds() + (comm_buffer->extra_prediction_ms * 0.001)), ovrTrue);
+    }
+
+    for (int i = 0; i < comm_buffer->num_objects; i++) {
+        ovrTrackedDeviceType deviceType = (ovrTrackedDeviceType)(ovrTrackedDevice_Object0 + i);
+        ovrPoseStatef ovr_pose;
+
+        ovr_GetDevicePoses(mSession, &deviceType, 1, (ovr_GetTimeInSeconds() + (comm_buffer->extra_prediction_ms * 0.001)), &ovr_pose);
+        if ((ovr_pose.ThePose.Orientation.x != 0) && (ovr_pose.ThePose.Orientation.y != 0) && (ovr_pose.ThePose.Orientation.z != 0)){
+            comm_buffer->object_poses[i] = ovr_pose;
+        }
     }
 
     for (int i = 0; i < 2; i++) {
@@ -282,7 +294,7 @@ void GuardianSystemDemo::Start(HINSTANCE hinst, shared_buffer* comm_buffer, HAND
     //InitSceneGraph();
     //mLastUpdateClock = std::chrono::high_resolution_clock::now();
  
-
+    comm_buffer->num_objects = (ovr_GetConnectedControllerTypes(mSession) >> 8) & 0xf;
     
     WaitForSingleObject(
         comm_mutex,    // handle to mutex
@@ -399,6 +411,9 @@ void no_graphics_start(shared_buffer* comm_buffer, HANDLE comm_mutex) {
         if (OVR_FAILURE(ovr_SetTrackingOriginType(mSession, ovrTrackingOrigin_FloorLevel)))  std::cout << "ovr_SetTrackingOriginType error" << std::endl;
     }
 
+
+    comm_buffer->num_objects = (ovr_GetConnectedControllerTypes(mSession) >> 8) & 0xf;
+
     std::thread vib_thread(vibration_thread, mSession);
     //vibration_thread(mSession);
 
@@ -505,7 +520,7 @@ int main(int argc, char** argsv)
         strncpy_s(comm_buffer->manufacturer_name, "Oculus_link", 127);
         strncpy_s(comm_buffer->tracking_space_name, "oculus_link", 127);
         comm_buffer->perform_prediction = false;
-        comm_buffer->extra_prediction_ms = 11.0f;
+        comm_buffer->extra_prediction_ms = 16.0f;
         comm_buffer->be_objects = false;
         comm_buffer->external_tracking = false;
     }
@@ -570,11 +585,11 @@ std::vector<uint8_t> pulse_patterns[17] = {
 void add_vibration(bool isRightHand, float amplitude, float frequency, float duration) {
 
     std::cout << " adding haptic for amplitude " << amplitude << " frequency " << frequency << " duration " << duration << std::endl;
-    if (duration < 0) return;
+    if (duration < 0) duration = 0;
     float amp = amplitude/100.0f;
     float freq = frequency * 320.0f;
     if (amplitude >= 100.0f) amp = 1.0f;
-    if (amp < 96.0/256) amp = 96.0/256;
+    if (amp < 128.0/256) amp = 128.0/256;
     uint32_t requested_duration = duration * 320; // 320 Hz processing rate
     uint32_t min_duration = 1;
     uint32_t pulse_width = 1;
@@ -608,15 +623,17 @@ void add_vibration(bool isRightHand, float amplitude, float frequency, float dur
   //  std::cout << " adding haptic for amplitude " << amplitude << " -> " << amp << " frequency " << frequency << " -> " << freq << " duration " << duration << " ->" << requested_duration
     //    <<" pulse_width " << pulse_width << std::endl;
   
-    uint64_t vib_buffer_sample_delta = ((ovr_GetTimeInSeconds() - vib_buf_time) * 320);
+    uint64_t vib_buffer_sample_delta = ((ovr_GetTimeInSeconds() - vib_buf_time[isRightHand]) * 320);
+      std::cout << " adding haptic for amplitude " << amplitude << " -> " << amp << " frequency " << frequency << " -> " << freq << " duration " << duration << " ->" << requested_duration
+      <<" pulse_width " << pulse_width << " delta " << vib_buffer_sample_delta << std::endl;
     for (int i = 0; i < requested_duration; i++) {
-        add_vib_sample(isRightHand, pulse_patterns[min_duration][(future_vib_buffer_index + vib_buffer_sample_delta + i) % min_duration] * amp, i + vib_buffer_sample_delta);
+        add_vib_sample(isRightHand, pulse_patterns[min_duration][(future_vib_buffer_index[isRightHand] + vib_buffer_sample_delta + i) % min_duration] * amp, i + vib_buffer_sample_delta);
     }
 
 }
 
 void add_vib_sample(bool isRightHand, uint8_t sample, uint32_t offset) {
-    future_vib_buffer[isRightHand][(future_vib_buffer_index + offset)%1024] = sample;
+    future_vib_buffer[isRightHand][(future_vib_buffer_index[isRightHand] + offset)%1024] = sample;
 }
 
 void vibration_thread(ovrSession mSession) {
@@ -631,8 +648,8 @@ void vibration_thread(ovrSession mSession) {
         Sleep(1000/40);
         for (int hand = 0; hand < 2; hand++) {
             for (int i = 0; i < 8; i++) {
-                buf[i] = future_vib_buffer[hand][future_vib_buffer_index + i];
-                future_vib_buffer[hand][future_vib_buffer_index + i] = 0;
+                buf[i] = future_vib_buffer[hand][future_vib_buffer_index[hand] + i];
+                future_vib_buffer[hand][future_vib_buffer_index[hand] + i] = 0;
             }
             ovrTouchHapticsDesc desc = ovr_GetTouchHapticsDesc(mSession, (hand==0)?ovrControllerType_LTouch: ovrControllerType_RTouch);
             //std::cout << "SampleRate " << desc.SampleRateHz << " SampleSize " << desc.SampleSizeInBytes << " MaxSamples " << desc.SubmitMaxSamples << " MinSamples " << desc.SubmitMinSamples << " OptimalSamples " << desc.SubmitOptimalSamples << std::endl;
@@ -644,10 +661,10 @@ void vibration_thread(ovrSession mSession) {
             ovr_GetControllerVibrationState(mSession, (hand == 0) ? ovrControllerType_LTouch : ovrControllerType_RTouch, &pbState);
 
             //std::cout << (counter & 0xff) << " - queue state after   space: " << pbState.RemainingQueueSpace << "   samples: " << pbState.SamplesQueued << " / " << desc.QueueMinSizeToAvoidStarvation << std::endl;
+            future_vib_buffer_index[hand] += 8;
+            vib_buf_time[hand] = ovr_GetTimeInSeconds();
+            if (future_vib_buffer_index[hand] >= 1024)future_vib_buffer_index[hand] = 0;
         }
-        future_vib_buffer_index+=8;
-        vib_buf_time = ovr_GetTimeInSeconds();
-        if (future_vib_buffer_index >= 1024)future_vib_buffer_index = 0;
         counter++;
 
     }

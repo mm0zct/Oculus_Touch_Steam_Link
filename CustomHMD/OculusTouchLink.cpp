@@ -65,6 +65,8 @@ struct shared_buffer {
     uint64_t logging_offset;
     bool external_tracking;
     ovrTrackingState tracking_state;
+    uint32_t num_objects;
+    ovrPoseStatef object_poses[4];
 };
 
 
@@ -1337,7 +1339,7 @@ private:
 class CSampleTrackerDriver : public vr::ITrackedDeviceServerDriver
 {                                                                                                                                             // hand_offset({ 0.01071,0.04078,-0.04731 }), hand_offset2({-0.003,-0.101,0.0089 })
 public:                                                                                                                                      //x = 0.00571 y = 0.04078 z = -0.03531 x2 =-0.000999998 y2 = -0.1 z = 0.0019
-    CSampleTrackerDriver(ovrSession mSession, ovrTrackedDeviceType object_index, bool isRightHand = true/*, ovrVector3f overall_offset, ovrQuatf overall_rotation*/) : mSession(mSession), m_object_index(object_index), isRightHand(isRightHand), hand_offset({ 0.00571,0.04078,-0.03531 }), hand_offset2({ -0.000999998,-0.1, 0.0019 })/*, overall_offset(overall_offset), overall_rotation(overall_rotation)*/
+    CSampleTrackerDriver(ovrSession mSession, /*ovrTrackedDeviceType */ unsigned int object_index, bool isRightHand = true/*, ovrVector3f overall_offset, ovrQuatf overall_rotation*/) : mSession(mSession), m_object_index(object_index), isRightHand(isRightHand), hand_offset({ 0.00571,0.04078,-0.03531 }), hand_offset2({ -0.000999998,-0.1, 0.0019 })/*, overall_offset(overall_offset), overall_rotation(overall_rotation)*/
     {
         m_unObjectId = vr::k_unTrackedDeviceIndexInvalid;
         m_ulPropertyContainer = vr::k_ulInvalidPropertyContainer;
@@ -1459,8 +1461,6 @@ public:                                                                         
         // return a constant that's not 0 (invalid), 1 is reserved for Oculus, so let's use that ;)
         vr::VRProperties()->SetUint64Property(m_ulPropertyContainer, Prop_CurrentUniverseId_Uint64, comm_buffer->vr_universe);
 
-
-
         return VRInitError_None;
     }
 
@@ -1541,9 +1541,10 @@ public:                                                                         
     }
     virtual DriverPose_t CalculatePose()
     {
-        ovrTrackedDeviceType deviceType = m_object_index;
+        /*ovrTrackedDeviceType deviceType = m_object_index;
         ovrPoseStatef ovr_pose;
-        ovr_GetDevicePoses(mSession, &deviceType, 1, ovr_GetTimeInSeconds(), &ovr_pose);
+        ovr_GetDevicePoses(mSession, &deviceType, 1, ovr_GetTimeInSeconds(), &ovr_pose);*/
+        ovrPoseStatef ovr_pose = comm_buffer->object_poses[this->m_object_index];
         DriverPose_t pose = { 0 };
         pose.poseIsValid = true;
         pose.result = TrackingResult_Running_OK;
@@ -1579,6 +1580,11 @@ public:                                                                         
         pose.vecPosition[1] = position.y;// +overall_offset.y;
         pose.vecPosition[2] = position.z;// +overall_offset.z;
 #else
+        pose.qRotation.w = ovr_pose.ThePose.Orientation.w;
+        pose.qRotation.x = ovr_pose.ThePose.Orientation.x;
+        pose.qRotation.y = ovr_pose.ThePose.Orientation.y;
+        pose.qRotation.z = ovr_pose.ThePose.Orientation.z;
+
         pose.vecPosition[0] = ovr_pose.ThePose.Position.x;
         pose.vecPosition[1] = ovr_pose.ThePose.Position.y;
         pose.vecPosition[2] = ovr_pose.ThePose.Position.z;
@@ -1653,7 +1659,7 @@ private:
     std::string m_sSerialNumber;
     std::string m_sModelNumber;
     ovrSession mSession;
-    ovrTrackedDeviceType m_object_index;
+    /*ovrTrackedDeviceType*/ unsigned int m_object_index;
     bool isRightHand;
     ovrVector3f hand_offset;
     ovrVector3f hand_offset2;
@@ -1962,9 +1968,10 @@ EVRInitError CServerDriver_OVRTL::Init(vr::IVRDriverContext* pDriverContext)
     }
 #endif
 
-    for(int tracker = 0; tracker < ((ovr_GetConnectedControllerTypes(mSession) >> 8 )&0xf); tracker++){
+    //for(int tracker = 0; tracker < ((ovr_GetConnectedControllerTypes(mSession) >> 8 )&0xf); tracker++){
+    for (int tracker = 0; tracker < comm_buffer->num_objects; tracker++) {
         log_to_buffer("Creating object tracker");
-        trackers.push_back(new CSampleTrackerDriver( mSession, (ovrTrackedDeviceType)(tracker<<8), true));
+        trackers.push_back(new CSampleTrackerDriver( mSession, tracker/*(ovrTrackedDeviceType)(tracker<<8)*/, true));
         vr::VRServerDriverHost()->TrackedDeviceAdded(trackers.back()->GetSerialNumber().c_str(), vr::TrackedDeviceClass_GenericTracker, trackers.back());
     }
 
