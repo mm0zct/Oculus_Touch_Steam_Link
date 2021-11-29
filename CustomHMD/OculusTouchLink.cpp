@@ -835,7 +835,6 @@ public:                                                                         
         pose.result = TrackingResult_Running_OK;
         pose.deviceIsConnected = true;
 
-        if (comm_buffer->be_objects) {
             pose.qRotation.w = ss.HandPoses[isRightHand].ThePose.Orientation.w;
             pose.qRotation.x = ss.HandPoses[isRightHand].ThePose.Orientation.x;
             pose.qRotation.y = ss.HandPoses[isRightHand].ThePose.Orientation.y;
