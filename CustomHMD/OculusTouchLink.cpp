@@ -835,6 +835,23 @@ public:                                                                         
         pose.result = TrackingResult_Running_OK;
         pose.deviceIsConnected = true;
 
+        if (comm_buffer->be_objects) {
+            pose.qRotation.w = ss.HandPoses[isRightHand].ThePose.Orientation.w;
+            pose.qRotation.x = ss.HandPoses[isRightHand].ThePose.Orientation.x;
+            pose.qRotation.y = ss.HandPoses[isRightHand].ThePose.Orientation.y;
+            pose.qRotation.z = ss.HandPoses[isRightHand].ThePose.Orientation.z;
+            pose.vecPosition[0] = ss.HandPoses[isRightHand].ThePose.Position.x;
+            pose.vecPosition[1] = ss.HandPoses[isRightHand].ThePose.Position.y;
+            pose.vecPosition[2] = ss.HandPoses[isRightHand].ThePose.Position.z;
+            pose.vecAcceleration[0] = ss.HandPoses[isRightHand].LinearAcceleration.x;
+            pose.vecAcceleration[1] = ss.HandPoses[isRightHand].LinearAcceleration.y;
+            pose.vecAcceleration[2] = ss.HandPoses[isRightHand].LinearAcceleration.z;
+            pose.vecVelocity[0] = ss.HandPoses[isRightHand].LinearVelocity.x;
+            pose.vecVelocity[1] = ss.HandPoses[isRightHand].LinearVelocity.y;
+            pose.vecVelocity[2] = ss.HandPoses[isRightHand].LinearVelocity.z;
+            return pose;
+        }
+
         ovrQuatf hand_qoffset = { 0.3420201, 0, 0, 0.9396926 };
         ovrQuatf hand_input = ss.HandPoses[isRightHand].ThePose.Orientation;
         ovrQuatf hand_result = ovrQuatfmul(hand_input, hand_qoffset);
