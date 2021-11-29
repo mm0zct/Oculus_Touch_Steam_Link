@@ -1343,7 +1343,7 @@ public:                                                                         
     {
         m_unObjectId = vr::k_unTrackedDeviceIndexInvalid;
         m_ulPropertyContainer = vr::k_ulInvalidPropertyContainer;
-        m_sSerialNumber = "WMHD316J600000_Controller_Right";
+        m_sSerialNumber = "OculusTrackedObject"+std::to_string(object_index);
         m_sModelNumber = "Oculus Rift CV1(Right Controller)";
         log_to_buffer(__func__);
     }
