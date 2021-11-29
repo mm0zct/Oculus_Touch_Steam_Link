@@ -835,6 +835,7 @@ public:                                                                         
         pose.result = TrackingResult_Running_OK;
         pose.deviceIsConnected = true;
 
+       /* if (comm_buffer->be_objects) {
             pose.qRotation.w = ss.HandPoses[isRightHand].ThePose.Orientation.w;
             pose.qRotation.x = ss.HandPoses[isRightHand].ThePose.Orientation.x;
             pose.qRotation.y = ss.HandPoses[isRightHand].ThePose.Orientation.y;
@@ -849,7 +850,7 @@ public:                                                                         
             pose.vecVelocity[1] = ss.HandPoses[isRightHand].LinearVelocity.y;
             pose.vecVelocity[2] = ss.HandPoses[isRightHand].LinearVelocity.z;
             return pose;
-        }
+        }*/
 
         ovrQuatf hand_qoffset = { 0.3420201, 0, 0, 0.9396926 };
         ovrQuatf hand_input = ss.HandPoses[isRightHand].ThePose.Orientation;
@@ -870,9 +871,15 @@ public:                                                                         
         pose.qRotation.y = hand_result.y;
         pose.qRotation.z = hand_result.z;
         ovrVector3f position;
-        position.x = ss.HandPoses[isRightHand].ThePose.Position.x + hand_voffset.x + hand_offset2.x;
-        position.y = ss.HandPoses[isRightHand].ThePose.Position.y + hand_voffset.y + hand_offset2.y;
-        position.z = ss.HandPoses[isRightHand].ThePose.Position.z + hand_voffset.z + hand_offset2.z;
+        if (comm_buffer->be_objects) {
+            position.x = ss.HandPoses[isRightHand].ThePose.Position.x;
+            position.y = ss.HandPoses[isRightHand].ThePose.Position.y;
+            position.z = ss.HandPoses[isRightHand].ThePose.Position.z;
+        } else {
+            position.x = ss.HandPoses[isRightHand].ThePose.Position.x + hand_voffset.x + hand_offset2.x;
+            position.y = ss.HandPoses[isRightHand].ThePose.Position.y + hand_voffset.y + hand_offset2.y;
+            position.z = ss.HandPoses[isRightHand].ThePose.Position.z + hand_voffset.z + hand_offset2.z;
+        }
         //position = rotateVector2(position, overall_rotation);
         pose.vecPosition[0] = position.x;// +overall_offset.x;
         pose.vecPosition[1] = position.y;// +overall_offset.y;
