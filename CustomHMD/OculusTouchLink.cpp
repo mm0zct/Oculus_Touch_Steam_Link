@@ -464,7 +464,7 @@ private:
 class CSampleControllerDriver : public vr::ITrackedDeviceServerDriver                                               
 {                                                                                                                                             // hand_offset({ 0.01071,0.04078,-0.04731 }), hand_offset2({-0.003,-0.101,0.0089 })
 public:                                                                                                                                      //x = 0.00571 y = 0.04078 z = -0.03531 x2 =-0.000999998 y2 = -0.1 z = 0.0019
-    CSampleControllerDriver(ovrSession mSession, bool isRightHand/*, ovrVector3f overall_offset, ovrQuatf overall_rotation*/): mSession(mSession),isRightHand(isRightHand), hand_offset({ 0.00571,0.04078,-0.03531 }), hand_offset2({ -0.000999998,-0.1, 0.0019 })/*, overall_offset(overall_offset), overall_rotation(overall_rotation)*/
+    CSampleControllerDriver(ovrSession mSession, bool isRightHand/*, ovrVector3f overall_offset, ovrQuatf overall_rotation*/, ovrVector3f hand_offset, ovrVector3f hand_offset2): mSession(mSession),isRightHand(isRightHand), hand_offset(hand_offset), hand_offset2(hand_offset2)/*, overall_offset(overall_offset), overall_rotation(overall_rotation)*/
     {
         m_unObjectId = vr::k_unTrackedDeviceIndexInvalid;
         m_ulPropertyContainer = vr::k_ulInvalidPropertyContainer;
@@ -834,23 +834,6 @@ public:                                                                         
         pose.poseIsValid = true;
         pose.result = TrackingResult_Running_OK;
         pose.deviceIsConnected = true;
-
-        if (comm_buffer->be_objects) {
-            pose.qRotation.w = ss.HandPoses[isRightHand].ThePose.Orientation.w;
-            pose.qRotation.x = ss.HandPoses[isRightHand].ThePose.Orientation.x;
-            pose.qRotation.y = ss.HandPoses[isRightHand].ThePose.Orientation.y;
-            pose.qRotation.z = ss.HandPoses[isRightHand].ThePose.Orientation.z;
-            pose.vecPosition[0] = ss.HandPoses[isRightHand].ThePose.Position.x;
-            pose.vecPosition[1] = ss.HandPoses[isRightHand].ThePose.Position.y;
-            pose.vecPosition[2] = ss.HandPoses[isRightHand].ThePose.Position.z;
-            pose.vecAcceleration[0] = ss.HandPoses[isRightHand].LinearAcceleration.x;
-            pose.vecAcceleration[1] = ss.HandPoses[isRightHand].LinearAcceleration.y;
-            pose.vecAcceleration[2] = ss.HandPoses[isRightHand].LinearAcceleration.z;
-            pose.vecVelocity[0] = ss.HandPoses[isRightHand].LinearVelocity.x;
-            pose.vecVelocity[1] = ss.HandPoses[isRightHand].LinearVelocity.y;
-            pose.vecVelocity[2] = ss.HandPoses[isRightHand].LinearVelocity.z;
-            return pose;
-        }
 
         ovrQuatf hand_qoffset = { 0.3420201, 0, 0, 0.9396926 };
         ovrQuatf hand_input = ss.HandPoses[isRightHand].ThePose.Orientation;
@@ -1977,11 +1960,21 @@ EVRInitError CServerDriver_OVRTL::Init(vr::IVRDriverContext* pDriverContext)
         }
     }
     else {
-        m_pLController = new CSampleControllerDriver(mSession, false/*, overall_offset, overall_rotation*/);
-        vr::VRServerDriverHost()->TrackedDeviceAdded(m_pLController->GetSerialNumber().c_str(), vr::TrackedDeviceClass_Controller, m_pLController);
+        if (comm_buffer->be_objects) {
+            m_pLController = new CSampleControllerDriver(mSession, false/*, overall_offset, overall_rotation*/, ovrVector3f { 0.0,0.0,0.0 }, ovrVector3f { 0.0,0.0,0.0 });
+            vr::VRServerDriverHost()->TrackedDeviceAdded(m_pLController->GetSerialNumber().c_str(), vr::TrackedDeviceClass_Controller, m_pLController);
 
-        m_pRController = new CSampleControllerDriver(mSession, true/*, overall_offset, overall_rotation*/);
-        vr::VRServerDriverHost()->TrackedDeviceAdded(m_pRController->GetSerialNumber().c_str(), vr::TrackedDeviceClass_Controller, m_pRController);
+            m_pRController = new CSampleControllerDriver(mSession, true/*, overall_offset, overall_rotation*/, ovrVector3f { 0.0,0.0,0.0 }, ovrVector3f { 0.0,0.0,0.0 });
+            vr::VRServerDriverHost()->TrackedDeviceAdded(m_pRController->GetSerialNumber().c_str(), vr::TrackedDeviceClass_Controller, m_pRController);
+        }
+        else {
+            m_pLController = new CSampleControllerDriver(mSession, false/*, overall_offset, overall_rotation*/, ovrVector3f { 0.00571,0.04078,-0.03531 }, ovrVector3f { -0.000999998,-0.1,0.0019 });
+            vr::VRServerDriverHost()->TrackedDeviceAdded(m_pLController->GetSerialNumber().c_str(), vr::TrackedDeviceClass_Controller, m_pLController);
+
+            m_pRController = new CSampleControllerDriver(mSession, true/*, overall_offset, overall_rotation*/, ovrVector3f { 0.00571,0.04078,-0.03531 }, ovrVector3f { -0.000999998,-0.1,0.0019 });
+            vr::VRServerDriverHost()->TrackedDeviceAdded(m_pRController->GetSerialNumber().c_str(), vr::TrackedDeviceClass_Controller, m_pRController);
+        }
+        //hand_offset({ 0.00571,0.04078,-0.03531 }), hand_offset2({ -0.000999998,-0.1, 0.0019 })
     }
 #endif
 
