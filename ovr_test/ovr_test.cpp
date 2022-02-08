@@ -75,6 +75,14 @@ void main_loop(ovrSession mSession, HANDLE comm_mutex, shared_buffer* comm_buffe
         if ((ovr_pose.ThePose.Orientation.x != 0) && (ovr_pose.ThePose.Orientation.y != 0) && (ovr_pose.ThePose.Orientation.z != 0)){
             comm_buffer->object_poses[i] = ovr_pose;
         }
+        if ((frame_count & 0x7FF) == 0) {
+            std::cout.precision(4);
+
+            std::cout << "Object" << i << std::dec << " x " <<
+                ovr_pose.ThePose.Position.x << " y " <<
+                ovr_pose.ThePose.Position.y << " z " <<
+                ovr_pose.ThePose.Position.z << std::endl;
+        }
     }
 
     for (int i = 0; i < 2; i++) {
@@ -148,10 +156,10 @@ void main_loop(ovrSession mSession, HANDLE comm_mutex, shared_buffer* comm_buffe
             std::cout.precision(4);
 
             std::cout << (i == 0 ? "lhand" : "rhand") << " 0x" << std::fixed <<
-                std::hex << ss.HandStatusFlags[i] << " x " <<
+                std::hex << ss.HandStatusFlags[i] << std::dec << " x " <<
                 ss.HandPoses[i].ThePose.Position.x << " y " <<
                 ss.HandPoses[i].ThePose.Position.y << " z " <<
-                ss.HandPoses[i].ThePose.Position.z << " button 0x" << inputState.Buttons << " touch 0x" << inputState.Touches << " g|t " << inputState.HandTrigger[i] << "|" << inputState.IndexTrigger[i] << " res 0x" << input_res;
+                ss.HandPoses[i].ThePose.Position.z << std::hex << " button 0x" << inputState.Buttons << " touch 0x" << inputState.Touches << " g|t " << inputState.HandTrigger[i] << "|" << inputState.IndexTrigger[i] << " res 0x" << input_res;
             //ovr_SetControllerVibration(mSession, i ? ovrControllerType_RTouch : ovrControllerType_LTouch, 1, 255);
             //std::cout << " " << 
 

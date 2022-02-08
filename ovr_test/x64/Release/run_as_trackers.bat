@@ -1,1 +1,1 @@
-ovr_test.exe n 31 HTC lighthouse n 10 y
+ovr_test.exe n 31 HTC lighthouse n 10 y y
