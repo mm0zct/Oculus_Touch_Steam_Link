@@ -7,7 +7,7 @@
 //#define DRAW_FRAME 1
 
 #define USE_MUTEX 1
-
+#define ADD_HMD 1
 #define CREATE_CONTROLLERS 1
 
 #define USE_SHARE_MEM_BUFFER 1
@@ -219,103 +219,103 @@ void CWatchdogDriver_Sample::Cleanup()
 //-----------------------------------------------------------------------------
 // Purpose:
 //-----------------------------------------------------------------------------
-class CSampleDeviceDriver : public vr::ITrackedDeviceServerDriver, public vr::IVRDisplayComponent
-{
-public:
-    CSampleDeviceDriver()
+
+
+//-----------------------------------------------------------------------------
+// Purpose:
+//-----------------------------------------------------------------------------
+class CSampleHeadsetTrackerDriver : public vr::ITrackedDeviceServerDriver
+{                                                                                                                                          
+public:                                                                                                                                    
+    CSampleHeadsetTrackerDriver(ovrSession mSession) : mSession(mSession)
     {
         m_unObjectId = vr::k_unTrackedDeviceIndexInvalid;
         m_ulPropertyContainer = vr::k_ulInvalidPropertyContainer;
-
-        DriverLog("Using settings values\n");
-        m_flIPD = vr::VRSettings()->GetFloat(k_pch_SteamVR_Section, k_pch_SteamVR_IPD_Float);
-
-        char buf[1024];
-        vr::VRSettings()->GetString(k_pch_Sample_Section, k_pch_Sample_SerialNumber_String, buf, sizeof(buf));
-        m_sSerialNumber = buf;
-
-        vr::VRSettings()->GetString(k_pch_Sample_Section, k_pch_Sample_ModelNumber_String, buf, sizeof(buf));
-        m_sModelNumber = buf;
-
-        m_nWindowX = vr::VRSettings()->GetInt32(k_pch_Sample_Section, k_pch_Sample_WindowX_Int32);
-        m_nWindowY = vr::VRSettings()->GetInt32(k_pch_Sample_Section, k_pch_Sample_WindowY_Int32);
-        m_nWindowWidth = vr::VRSettings()->GetInt32(k_pch_Sample_Section, k_pch_Sample_WindowWidth_Int32);
-        m_nWindowHeight = vr::VRSettings()->GetInt32(k_pch_Sample_Section, k_pch_Sample_WindowHeight_Int32);
-        m_nRenderWidth = vr::VRSettings()->GetInt32(k_pch_Sample_Section, k_pch_Sample_RenderWidth_Int32);
-        m_nRenderHeight = vr::VRSettings()->GetInt32(k_pch_Sample_Section, k_pch_Sample_RenderHeight_Int32);
-        m_flSecondsFromVsyncToPhotons = vr::VRSettings()->GetFloat(k_pch_Sample_Section, k_pch_Sample_SecondsFromVsyncToPhotons_Float);
-        m_flDisplayFrequency = vr::VRSettings()->GetFloat(k_pch_Sample_Section, k_pch_Sample_DisplayFrequency_Float);
-
-        DriverLog("driver_null: Serial Number: %s\n", m_sSerialNumber.c_str());
-        DriverLog("driver_null: Model Number: %s\n", m_sModelNumber.c_str());
-        DriverLog("driver_null: Window: %d %d %d %d\n", m_nWindowX, m_nWindowY, m_nWindowWidth, m_nWindowHeight);
-        DriverLog("driver_null: Render Target: %d %d\n", m_nRenderWidth, m_nRenderHeight);
-        DriverLog("driver_null: Seconds from Vsync to Photons: %f\n", m_flSecondsFromVsyncToPhotons);
-        DriverLog("driver_null: Display Frequency: %f\n", m_flDisplayFrequency);
-        DriverLog("driver_null: IPD: %f\n", m_flIPD);
+        m_sSerialNumber = "OculusTrackedHeadset";
+        m_sModelNumber = "Oculus Rift CV1(HMD)";
+        log_to_buffer(__func__);
     }
 
-    virtual ~CSampleDeviceDriver()
+    virtual ~CSampleHeadsetTrackerDriver()
     {
     }
 
 
     virtual EVRInitError Activate(vr::TrackedDeviceIndex_t unObjectId)
     {
+
+        log_to_buffer(__func__);
         m_unObjectId = unObjectId;
         m_ulPropertyContainer = vr::VRProperties()->TrackedDeviceToPropertyContainer(m_unObjectId);
+    
 
-
-        vr::VRProperties()->SetStringProperty(m_ulPropertyContainer, Prop_ModelNumber_String, m_sModelNumber.c_str());
-        vr::VRProperties()->SetStringProperty(m_ulPropertyContainer, Prop_RenderModelName_String, m_sModelNumber.c_str());
-        vr::VRProperties()->SetFloatProperty(m_ulPropertyContainer, Prop_UserIpdMeters_Float, m_flIPD);
-        vr::VRProperties()->SetFloatProperty(m_ulPropertyContainer, Prop_UserHeadToEyeDepthMeters_Float, 0.f);
-        vr::VRProperties()->SetFloatProperty(m_ulPropertyContainer, Prop_DisplayFrequency_Float, m_flDisplayFrequency);
-        vr::VRProperties()->SetFloatProperty(m_ulPropertyContainer, Prop_SecondsFromVsyncToPhotons_Float, m_flSecondsFromVsyncToPhotons);
-
-        // return a constant that's not 0 (invalid) or 1 (reserved for Oculus)
-        vr::VRProperties()->SetUint64Property(m_ulPropertyContainer, Prop_CurrentUniverseId_Uint64, 1);
-
-        // avoid "not fullscreen" warnings from vrmonitor
-        vr::VRProperties()->SetBoolProperty(m_ulPropertyContainer, Prop_IsOnDesktop_Bool, false);
-
-        // Icons can be configured in code or automatically configured by an external file "drivername\resources\driver.vrresources".
-        // Icon properties NOT configured in code (post Activate) are then auto-configured by the optional presence of a driver's "drivername\resources\driver.vrresources".
-        // In this manner a driver can configure their icons in a flexible data driven fashion by using an external file.
-        //
-        // The structure of the driver.vrresources file allows a driver to specialize their icons based on their HW.
-        // Keys matching the value in "Prop_ModelNumber_String" are considered first, since the driver may have model specific icons.
-        // An absence of a matching "Prop_ModelNumber_String" then considers the ETrackedDeviceClass ("HMD", "Controller", "GenericTracker", "TrackingReference")
-        // since the driver may have specialized icons based on those device class names.
-        //
-        // An absence of either then falls back to the "system.vrresources" where generic device class icons are then supplied.
-        //
-        // Please refer to "bin\drivers\sample\resources\driver.vrresources" which contains this sample configuration.
-        //
-        // "Alias" is a reserved key and specifies chaining to another json block.
-        //
-        // In this sample configuration file (overly complex FOR EXAMPLE PURPOSES ONLY)....
-        //
-        // "Model-v2.0" chains through the alias to "Model-v1.0" which chains through the alias to "Model-v Defaults".
-        //
-        // Keys NOT found in "Model-v2.0" would then chase through the "Alias" to be resolved in "Model-v1.0" and either resolve their or continue through the alias.
-        // Thus "Prop_NamedIconPathDeviceAlertLow_String" in each model's block represent a specialization specific for that "model".
-        // Keys in "Model-v Defaults" are an example of mapping to the same states, and here all map to "Prop_NamedIconPathDeviceOff_String".
-        //
-        bool bSetupIconUsingExternalResourceFile = true;
-        if (!bSetupIconUsingExternalResourceFile)
+        ovrHmdDesc hmd_desc = ovr_GetHmdDesc(mSession);
+        switch (hmd_desc.Type)
         {
-            // Setup properties directly in code.
-            // Path values are of the form {drivername}\icons\some_icon_filename.png
-            vr::VRProperties()->SetStringProperty(m_ulPropertyContainer, vr::Prop_NamedIconPathDeviceOff_String, "{OculusTouchLink}/icons/headset_sample_status_off.png");
-            vr::VRProperties()->SetStringProperty(m_ulPropertyContainer, vr::Prop_NamedIconPathDeviceSearching_String, "{OculusTouchLink}/icons/headset_sample_status_searching.gif");
-            vr::VRProperties()->SetStringProperty(m_ulPropertyContainer, vr::Prop_NamedIconPathDeviceSearchingAlert_String, "{OculusTouchLink}/icons/headset_sample_status_searching_alert.gif");
-            vr::VRProperties()->SetStringProperty(m_ulPropertyContainer, vr::Prop_NamedIconPathDeviceReady_String, "{OculusTouchLink}/icons/headset_sample_status_ready.png");
-            vr::VRProperties()->SetStringProperty(m_ulPropertyContainer, vr::Prop_NamedIconPathDeviceReadyAlert_String, "{OculusTouchLink}/icons/headset_sample_status_ready_alert.png");
-            vr::VRProperties()->SetStringProperty(m_ulPropertyContainer, vr::Prop_NamedIconPathDeviceNotReady_String, "{OculusTouchLink}/icons/headset_sample_status_error.png");
-            vr::VRProperties()->SetStringProperty(m_ulPropertyContainer, vr::Prop_NamedIconPathDeviceStandby_String, "{OculusTouchLink}/icons/headset_sample_status_standby.png");
-            vr::VRProperties()->SetStringProperty(m_ulPropertyContainer, vr::Prop_NamedIconPathDeviceAlertLow_String, "{OculusTouchLink}/icons/headset_sample_status_ready_low.png");
+        case ovrHmd_CV1:
+                VRProperties()->SetStringProperty(m_ulPropertyContainer, Prop_SerialNumber_String, "LHR-CV1_HMD");
+            break;
+        case ovrHmd_RiftS:
+                VRProperties()->SetStringProperty(m_ulPropertyContainer, Prop_SerialNumber_String, "LHR-RIFTS_HMD");
+                break;
+
+        case ovrHmd_Quest:
+                VRProperties()->SetStringProperty(m_ulPropertyContainer, Prop_SerialNumber_String, "LHR-QUEST_HMD");
+                break;
+  
+        case ovrHmd_Quest2:
+                VRProperties()->SetStringProperty(m_ulPropertyContainer, Prop_SerialNumber_String, "LHR-QUEST2_HMD");
+                break;
+       
+        default:
+                VRProperties()->SetStringProperty(m_ulPropertyContainer, Prop_SerialNumber_String, "LHR-OCULUS_HMD");
+                break;
+     
         }
+        vr::VRProperties()->SetStringProperty(m_ulPropertyContainer, vr::Prop_TrackingSystemName_String, comm_buffer->tracking_space_name);
+        vr::VRProperties()->SetStringProperty(m_ulPropertyContainer, Prop_RenderModelName_String, "generic_hmd");
+        vr::VRProperties()->SetStringProperty(m_ulPropertyContainer, vr::Prop_ModelNumber_String, m_sModelNumber.c_str());
+        vr::VRProperties()->SetStringProperty(m_ulPropertyContainer, vr::Prop_SerialNumber_String, m_sSerialNumber.c_str());
+        vr::VRProperties()->SetStringProperty(m_ulPropertyContainer, vr::Prop_ManufacturerName_String, comm_buffer->manufacturer_name);
+        vr::VRProperties()->SetStringProperty(m_ulPropertyContainer, vr::Prop_HardwareRevision_String, "1");
+        vr::VRProperties()->SetUint64Property(m_ulPropertyContainer, vr::Prop_HardwareRevision_Uint64, 1U);
+        vr::VRProperties()->SetInt32Property(m_ulPropertyContainer, vr::Prop_DeviceClass_Int32, vr::TrackedDeviceClass_GenericTracker);
+        vr::VRProperties()->SetStringProperty(m_ulPropertyContainer, vr::Prop_ResourceRoot_String, "oculus");
+
+
+        vr::VRProperties()->SetStringProperty(m_ulPropertyContainer, vr::Prop_RegisteredDeviceType_String, "htc/vive_trackerLHR-OCULUS_HMD");
+
+        vr::VRProperties()->SetStringProperty(m_ulPropertyContainer, vr::Prop_InputProfilePath_String, "{htc}/input/vive_tracker_profile.json");
+        // vr::VRProperties()->SetUint64Property(m_ulPropertyContainer, vr::Prop_SupportedButtons_Uint64, 30064771207U);
+        // vr::VRProperties()->SetInt32Property(m_ulPropertyContainer, vr::Prop_Axis0Type_Int32, vr::k_eControllerAxis_Joystick);
+        // vr::VRProperties()->SetInt32Property(m_ulPropertyContainer, vr::Prop_Axis1Type_Int32, vr::k_eControllerAxis_Trigger);
+        // vr::VRProperties()->SetInt32Property(m_ulPropertyContainer, vr::Prop_Axis2Type_Int32, vr::k_eControllerAxis_Trigger);
+        vr::VRProperties()->SetInt32Property(m_ulPropertyContainer, vr::Prop_ControllerRoleHint_Int32, vr::TrackedControllerRole_Invalid);
+        vr::VRProperties()->SetStringProperty(m_ulPropertyContainer, vr::Prop_ControllerType_String, "vive_tracker");
+
+        // vr::VRProperties()->SetStringProperty(m_ulPropertyContainer, vr::Prop_NamedIconPathDeviceOff_String, (!isRightHand) ? "{oculus}/icons/cv1_left_controller_off.png" : "{oculus}/icons/cv1_right_controller_off.png");
+        // vr::VRProperties()->SetStringProperty(m_ulPropertyContainer, vr::Prop_NamedIconPathDeviceSearching_String, (!isRightHand) ? "{oculus}/icons/cv1_left_controller_searching.gif" : "{oculus}/icons/cv1_right_controller_searching.gif");
+        // vr::VRProperties()->SetStringProperty(m_ulPropertyContainer, vr::Prop_NamedIconPathDeviceSearchingAlert_String, (!isRightHand) ? "{oculus}/icons/cv1_left_controller_alert_searching.gif" : "{oculus}/icons/cv1_right_controller_alert_searching.gif");
+        // vr::VRProperties()->SetStringProperty(m_ulPropertyContainer, vr::Prop_NamedIconPathDeviceReady_String, (!isRightHand) ? "{oculus}/icons/cv1_left_controller_ready.png" : "{oculus}/icons/cv1_right_controller_ready.png");
+        // vr::VRProperties()->SetStringProperty(m_ulPropertyContainer, vr::Prop_NamedIconPathDeviceReadyAlert_String, (!isRightHand) ? "{oculus}/icons/cv1_left_controller_ready_alert.png" : "{oculus}/icons/cv1_right_controller_ready_alert.png");
+        // vr::VRProperties()->SetStringProperty(m_ulPropertyContainer, vr::Prop_NamedIconPathDeviceNotReady_String, (!isRightHand) ? "{oculus}/icons/cv1_left_controller_error.png" : "{oculus}/icons/cv1_right_controller_error.png");
+        // vr::VRProperties()->SetStringProperty(m_ulPropertyContainer, vr::Prop_NamedIconPathDeviceStandby_String, (!isRightHand) ? "{oculus}/icons/cv1_left_controller_standby.png" : "{oculus}/icons/cv1_right_controller_standby.png");
+        vr::VRProperties()->SetStringProperty(m_ulPropertyContainer, vr::Prop_NamedIconPathDeviceOff_String,            "{oculus}/icons/cv1_headset_off.png");
+        vr::VRProperties()->SetStringProperty(m_ulPropertyContainer, vr::Prop_NamedIconPathDeviceSearching_String,      "{oculus}/icons/cv1_headset_searching.gif");
+        vr::VRProperties()->SetStringProperty(m_ulPropertyContainer, vr::Prop_NamedIconPathDeviceSearchingAlert_String, "{oculus}/icons/cv1_headset_searching_alert.gif");
+        vr::VRProperties()->SetStringProperty(m_ulPropertyContainer, vr::Prop_NamedIconPathDeviceReady_String,          "{oculus}/icons/cv1_headset_ready.png");
+        vr::VRProperties()->SetStringProperty(m_ulPropertyContainer, vr::Prop_NamedIconPathDeviceReadyAlert_String,     "{oculus}/icons/cv1_headset_ready_alert.png");
+        vr::VRProperties()->SetStringProperty(m_ulPropertyContainer, vr::Prop_NamedIconPathDeviceNotReady_String,       "{oculus}/icons/cv1_headset_error.png");
+        vr::VRProperties()->SetStringProperty(m_ulPropertyContainer, vr::Prop_NamedIconPathDeviceStandby_String,        "{oculus}/icons/cv1_headset_standby.png");
+        vr::VRProperties()->SetStringProperty(m_ulPropertyContainer, vr::Prop_NamedIconPathDeviceAlertLow_String,       "{oculus}/icons/cv1_headset_ready_low.png");
+
+        vr::VRProperties()->SetBoolProperty(m_ulPropertyContainer, vr::Prop_HasDisplayComponent_Bool, false);
+        vr::VRProperties()->SetBoolProperty(m_ulPropertyContainer, vr::Prop_HasCameraComponent_Bool, false);
+        vr::VRProperties()->SetBoolProperty(m_ulPropertyContainer, vr::Prop_HasDriverDirectModeComponent_Bool, false);
+        vr::VRProperties()->SetBoolProperty(m_ulPropertyContainer, vr::Prop_HasVirtualDisplayComponent_Bool, false);
+
+        // return a constant that's not 0 (invalid), 1 is reserved for Oculus, so let's use that ;)
+        vr::VRProperties()->SetUint64Property(m_ulPropertyContainer, Prop_CurrentUniverseId_Uint64, comm_buffer->vr_universe);
 
         return VRInitError_None;
     }
@@ -331,11 +331,6 @@ public:
 
     void* GetComponent(const char* pchComponentNameAndVersion)
     {
-        if (!_stricmp(pchComponentNameAndVersion, vr::IVRDisplayComponent_Version))
-        {
-            return (vr::IVRDisplayComponent*)this;
-        }
-
         // override this to add a component to a driver
         return NULL;
     }
@@ -351,94 +346,122 @@ public:
             pchResponseBuffer[0] = 0;
     }
 
-    virtual void GetWindowBounds(int32_t* pnX, int32_t* pnY, uint32_t* pnWidth, uint32_t* pnHeight)
-    {
-        *pnX = m_nWindowX;
-        *pnY = m_nWindowY;
-        *pnWidth = m_nWindowWidth;
-        *pnHeight = m_nWindowHeight;
+
+    ovrQuatf ovrQuatfmul(ovrQuatf q1, ovrQuatf q2) {
+        ovrQuatf result = { 0 };
+        result.x = q1.x * q2.w + q1.y * q2.z - q1.z * q2.y + q1.w * q2.x;
+        result.y = -q1.x * q2.z + q1.y * q2.w + q1.z * q2.x + q1.w * q2.y;
+        result.z = q1.x * q2.y - q1.y * q2.x + q1.z * q2.w + q1.w * q2.z;
+        result.w = -q1.x * q2.x - q1.y * q2.y - q1.z * q2.z + q1.w * q2.w;
+        return result;
+    }
+    ovrVector3f rotateVector(const ovrVector3f _V, ovrQuatf q)const {
+        ovrVector3f vec;   // any constructor will do
+        float r, i, j, k;
+        r = q.w;
+        i = q.x;
+        j = q.y;
+        k = q.z;
+        vec.x = 2 * (r * _V.z * j + i * _V.z * k - r * _V.y * k + i * _V.y * j) + _V.x * (r * r + i * i - j * j - k * k);
+        vec.y = 2 * (r * _V.x * k + i * _V.x * j - r * _V.z * i + j * _V.z * k) + _V.y * (r * r - i * i + j * j - k * k);
+        vec.z = 2 * (r * _V.y * i - r * _V.x * j + i * _V.x * k + j * _V.y * k) + _V.z * (r * r - i * i - j * j + k * k);
+        return vec;
     }
 
-    virtual bool IsDisplayOnDesktop()
+    ovrVector3f crossProduct(const ovrVector3f v, ovrVector3f p) const
     {
-        return true;
+        return ovrVector3f{ v.y * p.z - v.z * p.y, v.z * p.x - v.x * p.z, v.x * p.y - v.y * p.x };
     }
 
-    virtual bool IsDisplayRealDisplay()
+    ovrVector3f rotateVector2(ovrVector3f v, ovrQuatf q)
     {
-        return false;
+        // nVidia SDK implementation
+
+        ovrVector3f uv, uuv;
+        ovrVector3f qvec{ q.x, q.y, q.z };
+        uv = crossProduct(qvec, v);
+        uuv = crossProduct(qvec, uv);
+        uv.x *= (2.0f * q.w);
+        uv.y *= (2.0f * q.w);
+        uv.z *= (2.0f * q.w);
+        uuv.x *= 2.0f;
+        uuv.y *= 2.0f;
+        uuv.z *= 2.0f;
+
+        return ovrVector3f{ v.x + uv.x + uuv.x, v.y + uv.y + uuv.y, v.z + uv.z + uuv.z };
     }
-
-    virtual void GetRecommendedRenderTargetSize(uint32_t* pnWidth, uint32_t* pnHeight)
-    {
-        *pnWidth = m_nRenderWidth;
-        *pnHeight = m_nRenderHeight;
-    }
-
-    virtual void GetEyeOutputViewport(EVREye eEye, uint32_t* pnX, uint32_t* pnY, uint32_t* pnWidth, uint32_t* pnHeight)
-    {
-        *pnY = 0;
-        *pnWidth = m_nWindowWidth / 2;
-        *pnHeight = m_nWindowHeight;
-
-        if (eEye == Eye_Left)
-        {
-            *pnX = 0;
-        }
-        else
-        {
-            *pnX = m_nWindowWidth / 2;
-            *pnX = m_nWindowWidth / 2;
-        }
-    }
-
-    virtual void GetProjectionRaw(EVREye eEye, float* pfLeft, float* pfRight, float* pfTop, float* pfBottom)
-    {
-        *pfLeft = -1.0;
-        *pfRight = 1.0;
-        *pfTop = -1.0;
-        *pfBottom = 1.0;
-    }
-
-    virtual DistortionCoordinates_t ComputeDistortion(EVREye eEye, float fU, float fV)
-    {
-        DistortionCoordinates_t coordinates;
-        coordinates.rfBlue[0] = fU;
-        coordinates.rfBlue[1] = fV;
-        coordinates.rfGreen[0] = fU;
-        coordinates.rfGreen[1] = fV;
-        coordinates.rfRed[0] = fU;
-        coordinates.rfRed[1] = fV;
-        return coordinates;
-    }
-
     virtual DriverPose_t GetPose()
     {
+        m_last_pose = CalculatePose();
+        return this->m_last_pose;
+    }
+    virtual DriverPose_t CalculatePose()
+    {
+        
+        ovrTrackedDeviceType deviceType = ovrTrackedDevice_HMD;
+        ovrPoseStatef ovr_pose;
+        ovr_GetDevicePoses(mSession, &deviceType, 1, ovr_GetTimeInSeconds(), &ovr_pose);
         DriverPose_t pose = { 0 };
         pose.poseIsValid = true;
         pose.result = TrackingResult_Running_OK;
         pose.deviceIsConnected = true;
+      
+        pose.qRotation.w = ovr_pose.ThePose.Orientation.w;
+        pose.qRotation.x = ovr_pose.ThePose.Orientation.x;
+        pose.qRotation.y = ovr_pose.ThePose.Orientation.y;
+        pose.qRotation.z = ovr_pose.ThePose.Orientation.z;
+
+        pose.vecPosition[0] = ovr_pose.ThePose.Position.x;
+        pose.vecPosition[1] = ovr_pose.ThePose.Position.y;
+        pose.vecPosition[2] = ovr_pose.ThePose.Position.z;
+
+        ovrVector3f linAcc = (ovr_pose.LinearAcceleration);
+        ovrVector3f linVel = (ovr_pose.LinearVelocity);
+
+     
+        pose.vecAcceleration[0] = linAcc.x;
+        pose.vecAcceleration[1] = linAcc.y;
+        pose.vecAcceleration[2] = linAcc.z;
 
         pose.qWorldFromDriverRotation = HmdQuaternion_Init(1, 0, 0, 0);
         pose.qDriverFromHeadRotation = HmdQuaternion_Init(1, 0, 0, 0);
 
+        pose.vecVelocity[0] = linVel.x;
+        pose.vecVelocity[1] = linVel.y;
+        pose.vecVelocity[2] = linVel.z;
 
+ 
+        pose.poseTimeOffset = 0;  // let's let Oculus do it
+   
+
+        pose.vecAngularAcceleration[0] = ovr_pose.AngularAcceleration.x;
+        pose.vecAngularAcceleration[1] = ovr_pose.AngularAcceleration.y;
+        pose.vecAngularAcceleration[2] = ovr_pose.AngularAcceleration.z;
+
+        pose.vecAngularVelocity[0] = ovr_pose.AngularVelocity.x;
+        pose.vecAngularVelocity[1] = ovr_pose.AngularVelocity.y;
+        pose.vecAngularVelocity[2] = ovr_pose.AngularVelocity.z;
+
+       
         return pose;
     }
 
 
+
+
     void RunFrame()
     {
-        // In a real driver, this should happen from some pose tracking thread.
-        // The RunFrame interval is unspecified and can be very irregular if some other
-        // driver blocks it for some periodic task.
-        if (m_unObjectId != vr::k_unTrackedDeviceIndexInvalid)
-        {
-            vr::VRServerDriverHost()->TrackedDevicePoseUpdated(m_unObjectId, GetPose(), sizeof(DriverPose_t));
-        }
+        m_last_pose = this->CalculatePose();
+        vr::VRServerDriverHost()->TrackedDevicePoseUpdated(m_unObjectId, m_last_pose, sizeof(DriverPose_t));
     }
 
-    std::string GetSerialNumber() const { return m_sSerialNumber; }
+    void ProcessEvent(const vr::VREvent_t& vrEvent)
+    {
+
+    }
+
+
+    std::string GetSerialNumber() const { log_to_buffer(__func__); return m_sSerialNumber; }
 
 private:
     vr::TrackedDeviceIndex_t m_unObjectId;
@@ -446,17 +469,15 @@ private:
 
     std::string m_sSerialNumber;
     std::string m_sModelNumber;
+    ovrSession mSession;
 
-    int32_t m_nWindowX;
-    int32_t m_nWindowY;
-    int32_t m_nWindowWidth;
-    int32_t m_nWindowHeight;
-    int32_t m_nRenderWidth;
-    int32_t m_nRenderHeight;
-    float m_flSecondsFromVsyncToPhotons;
-    float m_flDisplayFrequency;
-    float m_flIPD;
+
+    DriverPose_t m_last_pose;
+
+
 };
+
+
 #endif
 //-----------------------------------------------------------------------------
 // Purpose:
@@ -508,13 +529,11 @@ public:                                                                         
 
 
        /* VRProperties()->SetStringProperty(m_ulPropertyContainer, Prop_ControllerType_String, "oculus_touch");       */
+        vr::VRProperties()->SetStringProperty(m_ulPropertyContainer, vr::Prop_TrackingSystemName_String, comm_buffer->tracking_space_name);
+        vr::VRProperties()->SetStringProperty(m_ulPropertyContainer, vr::Prop_ManufacturerName_String, comm_buffer->manufacturer_name);
         if (comm_buffer->be_objects) {
-            vr::VRProperties()->SetStringProperty(m_ulPropertyContainer, vr::Prop_TrackingSystemName_String, "lighthouse");
             VRProperties()->SetStringProperty(m_ulPropertyContainer, Prop_RenderModelName_String, "{htc}vr_tracker_vive_1_0");
             vr::VRProperties()->SetStringProperty(m_ulPropertyContainer, vr::Prop_ModelNumber_String, "Vive Tracker Pro MV");
-            // vr::VRProperties()->SetStringProperty(m_ulPropertyContainer, vr::Prop_SerialNumber_String, m_sSerialNumber.c_str());
-           /* vr::VRProperties()->SetStringProperty(m_ulPropertyContainer, vr::Prop_RenderModelName_String, (isRightHand) ? "oculus_cv1_controller_right" : "oculus_cv1_controller_left");    */
-            vr::VRProperties()->SetStringProperty(m_ulPropertyContainer, vr::Prop_ManufacturerName_String, "HTC");
             vr::VRProperties()->SetStringProperty(m_ulPropertyContainer, vr::Prop_HardwareRevision_String, "14");
             vr::VRProperties()->SetUint64Property(m_ulPropertyContainer, vr::Prop_HardwareRevision_Uint64, 14U);
             vr::VRProperties()->SetInt32Property(m_ulPropertyContainer, vr::Prop_DeviceClass_Int32, vr::TrackedDeviceClass_GenericTracker);
@@ -592,11 +611,10 @@ public:                                                                         
                     VRProperties()->SetStringProperty(m_ulPropertyContainer, Prop_RenderModelName_String, "oculus_cv1_controller_left");
                 }
             }
-            vr::VRProperties()->SetStringProperty(m_ulPropertyContainer, vr::Prop_TrackingSystemName_String, comm_buffer->tracking_space_name);
             vr::VRProperties()->SetStringProperty(m_ulPropertyContainer, vr::Prop_ModelNumber_String, m_sModelNumber.c_str());
             vr::VRProperties()->SetStringProperty(m_ulPropertyContainer, vr::Prop_SerialNumber_String, m_sSerialNumber.c_str());
             /* vr::VRProperties()->SetStringProperty(m_ulPropertyContainer, vr::Prop_RenderModelName_String, (isRightHand) ? "oculus_cv1_controller_right" : "oculus_cv1_controller_left");    */
-            vr::VRProperties()->SetStringProperty(m_ulPropertyContainer, vr::Prop_ManufacturerName_String, comm_buffer->manufacturer_name);
+
             vr::VRProperties()->SetStringProperty(m_ulPropertyContainer, vr::Prop_HardwareRevision_String, "14");
             vr::VRProperties()->SetUint64Property(m_ulPropertyContainer, vr::Prop_HardwareRevision_Uint64, 14U);
             vr::VRProperties()->SetInt32Property(m_ulPropertyContainer, vr::Prop_DeviceClass_Int32, vr::TrackedDeviceClass_Controller);
@@ -1703,7 +1721,7 @@ private:
     ovrSession mSession = nullptr;
     ovrGraphicsLuid luid{};
 #if ADD_HMD
-    CSampleDeviceDriver* m_pNullHmdLatest = nullptr;
+    CSampleHeadsetTrackerDriver* m_pNullHmdLatest = nullptr;
 #endif
     CSampleControllerDriver* m_pLController = nullptr;
     CSampleControllerDriver* m_pRController = nullptr;
@@ -1950,8 +1968,8 @@ EVRInitError CServerDriver_OVRTL::Init(vr::IVRDriverContext* pDriverContext)
             return VRInitError_Init_Internal;
     }
  #ifdef ADD_HMD
-    m_pNullHmdLatest = new CSampleDeviceDriver();
-    vr::VRServerDriverHost()->TrackedDeviceAdded(m_pNullHmdLatest->GetSerialNumber().c_str(), vr::TrackedDeviceClass_HMD, m_pNullHmdLatest);
+    m_pNullHmdLatest = new CSampleHeadsetTrackerDriver(mSession);
+    vr::VRServerDriverHost()->TrackedDeviceAdded(m_pNullHmdLatest->GetSerialNumber().c_str(), vr::TrackedDeviceClass_GenericTracker, m_pNullHmdLatest);
 #endif
 #if CREATE_CONTROLLERS
     if (0/*comm_buffer->be_objects*/) {
