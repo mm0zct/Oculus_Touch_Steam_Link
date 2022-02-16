@@ -67,6 +67,7 @@ struct shared_buffer {
     ovrTrackingState tracking_state;
     uint32_t num_objects;
     ovrPoseStatef object_poses[4];
+    bool track_hmd;
 };
 
 
@@ -1883,7 +1884,7 @@ EVRInitError CServerDriver_OVRTL::Init(vr::IVRDriverContext* pDriverContext)
     InitDriverLog(vr::VRDriverLog());
 
 #if EXPERIMENTAL_OFFSET_CALIBRATION
-    ovrVector3f overall_offset{ -0.01*30.57033738,-0.01*46.98443338, 0.01* 54.50133916 };
+    ovrVector3f overall_offset{ -0.01 * 30.57033738,-0.01 * 46.98443338, 0.01 * 54.50133916 };
     ovrQuatf overall_rotation{ 0 };
 
     overall_rotation = ToQuaternion(0, (30.28197291 / 180.0) * 3.141592, 0);
@@ -1901,7 +1902,7 @@ EVRInitError CServerDriver_OVRTL::Init(vr::IVRDriverContext* pDriverContext)
         sizeof(shared_buffer),                // maximum object size (low-order DWORD)
         L"Global\\oculus_steamvr_touch_controller_data_channel");                 // name of mapping object
 #else
-   
+
     hMapFile = OpenFileMapping(
         FILE_MAP_ALL_ACCESS,   // read/write access
         FALSE,                 // do not inherit the name
@@ -1909,7 +1910,7 @@ EVRInitError CServerDriver_OVRTL::Init(vr::IVRDriverContext* pDriverContext)
 #endif
     if (hMapFile == NULL)
     {
-        std::cout<<"Could not create file mapping object "<< GetLastError() << std::endl;
+        std::cout << "Could not create file mapping object " << GetLastError() << std::endl;
         return VRInitError_Init_Internal;
     }
     comm_buffer = (shared_buffer*)MapViewOfFile(hMapFile,   // handle to map object
@@ -1967,9 +1968,11 @@ EVRInitError CServerDriver_OVRTL::Init(vr::IVRDriverContext* pDriverContext)
         if (OVR_FAILURE(ovr_SetTrackingOriginType(mSession, ovrTrackingOrigin_FloorLevel)))
             return VRInitError_Init_Internal;
     }
- #ifdef ADD_HMD
-    m_pNullHmdLatest = new CSampleHeadsetTrackerDriver(mSession);
-    vr::VRServerDriverHost()->TrackedDeviceAdded(m_pNullHmdLatest->GetSerialNumber().c_str(), vr::TrackedDeviceClass_GenericTracker, m_pNullHmdLatest);
+#ifdef ADD_HMD
+    if (comm_buffer->track_hmd) {
+        m_pNullHmdLatest = new CSampleHeadsetTrackerDriver(mSession);
+        vr::VRServerDriverHost()->TrackedDeviceAdded(m_pNullHmdLatest->GetSerialNumber().c_str(), vr::TrackedDeviceClass_GenericTracker, m_pNullHmdLatest);
+    }
 #endif
 #if CREATE_CONTROLLERS
     if (0/*comm_buffer->be_objects*/) {
@@ -2023,8 +2026,10 @@ void CServerDriver_OVRTL::Cleanup()
     log_to_buffer(__func__);
     CleanupDriverLog();
 #ifdef ADD_HMD
-    delete m_pNullHmdLatest;
-    m_pNullHmdLatest = NULL;
+    if (m_pNullHmdLatest) {
+        delete m_pNullHmdLatest;
+        m_pNullHmdLatest = NULL;
+    }
 #endif
 #if CREATE_CONTROLLERS
     if(m_pLController) delete m_pLController;

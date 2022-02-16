@@ -37,6 +37,7 @@ struct shared_buffer {
     ovrTrackingState tracking_state;
     uint32_t num_objects;
     ovrPoseStatef object_poses[4];
+    bool track_hmd;
 };
 
 DirectX11 DIRECTX;
@@ -474,12 +475,13 @@ int main(int argc, char** argsv)
     std::cout << "Extra prediction time (ms) for example 11.1 for 1 frame at 90fps" << std::endl;
     std::cout << "All controllers are tracked objects instead of controllers y/n" << std::endl;
     std::cout << "Perform tracking in ovr_test instead of steamvr driver y/n" << std::endl;
+    std::cout << "Track the headset as a tracking object y/n" << std::endl;
     std::cout << "" << std::endl;
     std::cout << "This program is super dumb and expects all of the arguments or none (for defaults), suggested invocations:" << std::endl;
     std::cout << "ovr_test.exe n 1 Oculus oculus n 10 n n(must be use with ovr_dummy.exe)" << std::endl;
     std::cout << "ovr_test.exe y 1 Oculus oculus y 10 n n" << std::endl;
-    std::cout << "ovr_test.exe y 31 Oculus_link oculus_link n 10 n y" << std::endl;
-    std::cout << "ovr_test.exe n 31 Oculus_link oculus_link n 10 n n(default)" << std::endl;
+    std::cout << "ovr_test.exe y 31 Oculus_link oculus_link n 10 n y n" << std::endl;
+    std::cout << "ovr_test.exe n 31 Oculus_link oculus_link n 10 n n y(default)" << std::endl;
 
 
     HANDLE hMapFile;
@@ -521,8 +523,8 @@ int main(int argc, char** argsv)
     }
     comm_buffer->logging_offset = 0;
     bool do_rendering = false;
-    if (argc < 8) {
-        std::cout << " <8 arguments, using defaults: y 31 Oculus_link oculus_link y 5 n" << std::endl;
+    if (argc < 9) {
+        std::cout << " <9 arguments, using defaults: n 31 Oculus_link oculus_link n 16 n n y" << std::endl;
         do_rendering = false;
         comm_buffer->vr_universe = 31;
         strncpy_s(comm_buffer->manufacturer_name, "Oculus_link", 127);
@@ -531,6 +533,7 @@ int main(int argc, char** argsv)
         comm_buffer->extra_prediction_ms = 16.0f;
         comm_buffer->be_objects = false;
         comm_buffer->external_tracking = false;
+        comm_buffer->track_hmd = true;
     }
     else {
         do_rendering = (std::string(argsv[1]) == "y");
@@ -540,7 +543,8 @@ int main(int argc, char** argsv)
         comm_buffer->perform_prediction = (std::string(argsv[5]) == "y");
         comm_buffer->extra_prediction_ms = atof(argsv[6]);
         comm_buffer->be_objects = (std::string(argsv[7]) == "y");
-        comm_buffer->external_tracking = (std::string(argsv[8]) == "y");;
+        comm_buffer->external_tracking = (std::string(argsv[8]) == "y");
+        comm_buffer->track_hmd = (std::string(argsv[9]) == "y");
     }
 
     HANDLE comm_mutex = CreateMutex(0, true, L"Local\\oculus_steamvr_touch_controller_mutex");
