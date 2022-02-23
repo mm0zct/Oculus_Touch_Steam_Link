@@ -401,7 +401,18 @@ public:
         
         ovrTrackedDeviceType deviceType = ovrTrackedDevice_HMD;
         ovrPoseStatef ovr_pose;
-        ovr_GetDevicePoses(mSession, &deviceType, 1, ovr_GetTimeInSeconds(), &ovr_pose);
+        //ovr_GetDevicePoses(mSession, &deviceType, 1, ovr_GetTimeInSeconds(), &ovr_pose);
+
+        ovrTrackingState ss;
+        if (comm_buffer->external_tracking) {
+            ss = comm_buffer->tracking_state;
+        }
+        else {
+            ss = ovr_GetTrackingState(mSession,
+                (comm_buffer->perform_prediction) ? 0.0 : (ovr_GetTimeInSeconds() + (comm_buffer->extra_prediction_ms * 0.001)),
+                ovrTrue);
+        }
+        ovr_pose = ss.HeadPose;
         DriverPose_t pose = { 0 };
         pose.poseIsValid = true;
         pose.result = TrackingResult_Running_OK;
