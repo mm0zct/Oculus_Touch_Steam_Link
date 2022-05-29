@@ -465,6 +465,14 @@ void no_graphics_start(shared_buffer* comm_buffer, HANDLE comm_mutex) {
 
 int main(int argc, char** argsv)
 {
+    //Limit to one instance.
+    CreateMutexA(0, FALSE, "Local\\ovr_test_instance_mutex");
+    if (GetLastError() == ERROR_ALREADY_EXISTS)
+    {
+        std::cout << "An instance of ovr_test.exe is already running." << std::endl;
+        return 2; //2 for this mutex exit (I didn't use -2 becuase the wrap around number seemed to be unpredictable, and as there is no standard aside from 0 for exit codes, it seemed ok to do).
+    }
+
     std::cout << "Welcome to oculus_touch_link, this program provides the input and haptic link to the stream driver, as well as passing confuguration data" << std::endl;
     std::cout << "You can provide this program with arguments to specify:" << std::endl;
     std::cout << "Render to Oculus headset y/n  (\"n\" must be use with ovr_dummy.exe)" << std::endl;
@@ -512,7 +520,6 @@ int main(int argc, char** argsv)
         0,
         sizeof(shared_buffer)))shared_buffer();
 
-
     if (comm_buffer == NULL)
     {
         std::cout << "Could not map view of file " << GetLastError() << std::endl;
@@ -524,7 +531,7 @@ int main(int argc, char** argsv)
     comm_buffer->logging_offset = 0;
     bool do_rendering = false;
     if (argc < 9) {
-        std::cout << " <9 arguments, using defaults: n 31 Oculus_link oculus_link n 16 n n y" << std::endl;
+        std::cout << "<9 arguments, using defaults: n 31 Oculus_link oculus_link n 16 n n y" << std::endl;
         do_rendering = false;
         comm_buffer->vr_universe = 31;
         strncpy_s(comm_buffer->manufacturer_name, "Oculus_link", 127);
@@ -536,6 +543,16 @@ int main(int argc, char** argsv)
         comm_buffer->track_hmd = true;
     }
     else {
+        std::cout << "Using arguments: " << argsv[1]
+            << " " << argsv[2]
+            << " " << argsv[3]
+            << " " << argsv[4]
+            << " " << argsv[5]
+            << " " << argsv[6]
+            << " " << argsv[7]
+            << " " << argsv[8]
+            << " " << argsv[9]
+            << std::endl;
         do_rendering = (std::string(argsv[1]) == "y");
         comm_buffer->vr_universe = atoi(argsv[2]);
         strncpy_s(comm_buffer->manufacturer_name, argsv[3], 127);

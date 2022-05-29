@@ -36,7 +36,10 @@
 #include <thread>
 #include <chrono>
 #include <iostream>
-
+#include <locale>
+#include <codecvt>
+#include <string>
+#include <mutex>
 
 #if defined( _WINDOWS )
 #include <windows.h>
@@ -1729,7 +1732,8 @@ public:
 
 private:
     void InitRenderTargets(const ovrHmdDesc& hmdDesc);
-    void  Render();
+    void RunOVRTest();
+    void Render();
     ovrSession mSession = nullptr;
     ovrGraphicsLuid luid{};
 #if ADD_HMD
@@ -1739,6 +1743,8 @@ private:
     CSampleControllerDriver* m_pRController = nullptr;
     std::vector<CSampleTrackerDriver*> trackers;
     HANDLE hMapFile;
+    STARTUPINFOA si;
+    PROCESS_INFORMATION pi;
 
 #if DRAW_FRAME
     uint32_t mFrameIndex = 0;                                               // Global frame counter
@@ -1889,8 +1895,148 @@ ovrQuatf ToQuaternion(double x, double y, double z)
     return q;
 }
 
+//Returns the last Win32 error, in string format. Returns an empty string if there is no error.
+std::string GetLastErrorAsString()
+{
+    //Get the error message ID, if any.
+    DWORD errorMessageID = ::GetLastError();
+    if (errorMessageID == 0) {
+        return std::string(); //No error message has been recorded
+    }
+
+    LPSTR messageBuffer = nullptr;
+
+    //Ask Win32 to give us the string version of that message ID.
+    //The parameters we pass in, tell Win32 to create the buffer that holds the message for us (because we don't yet know how long the message string will be).
+    size_t size = FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+        NULL, errorMessageID, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)&messageBuffer, 0, NULL);
+
+    //Copy the error message into a std::string.
+    std::string message(messageBuffer, size);
+
+    //Free the Win32's string's buffer.
+    LocalFree(messageBuffer);
+
+    return message;
+}
+
+#include <locale> 
+#include <codecvt>
+std::string ExePath() {
+    TCHAR buffer[MAX_PATH] = { 0 };
+    GetModuleFileName(NULL, buffer, MAX_PATH);
+    std::wstring::size_type pos = std::wstring(buffer).find_last_of(L"\\/");
+    std::wstring wstr = std::wstring(buffer).substr(0, pos);
+
+    //setup converter
+    using convert_type = std::codecvt_utf8<wchar_t>;
+    std::wstring_convert<convert_type, wchar_t> converter;
+    //use converter (.to_bytes: wstr->str, .from_bytes: str->wstr)
+    std::string converted_str = converter.to_bytes(wstr);
+    return converted_str;
+}
+
+//https://gist.github.com/pwm1234/05280cf2e462853e183d
+std::string get_module_path(void* address)
+{
+    char path[FILENAME_MAX];
+    HMODULE hm = NULL;
+
+    if (!GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
+        GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+        (LPCSTR)address,
+        &hm))
+    {
+        throw std::runtime_error(std::string("GetModuleHandle returned " + GetLastError()));
+    }
+    GetModuleFileNameA(hm, path, sizeof(path));
+
+    std::string p = path;
+    return p;
+}
+void foo(){}
+
+std::string GetParentDirectory(std::string path)
+{
+    return path.substr(0, path.find_last_of("\\"));
+}
+
+void CServerDriver_OVRTL::RunOVRTest()
+{
+    //Attempt to launch ovr_test automatically.
+    //https://stackoverflow.com/questions/15435994/how-do-i-open-an-exe-from-another-c-exe
+    std::thread([this]()
+    {
+        // set the size of the structures
+        ZeroMemory(&si, sizeof(si));
+        si.cb = sizeof(si);
+        ZeroMemory(&pi, sizeof(pi));
+
+        //std::string dllPath = GetParentDirectory(get_module_path(foo));
+        //This assumes that ovr_test.exe is in ..\.. from this dll which is usually located in bin\win64.
+        std::string addonPath = GetParentDirectory(GetParentDirectory(GetParentDirectory(get_module_path(foo))));
+
+        std::string argsStr;
+        std::ifstream inFile(addonPath + "\\args.txt");
+        if (inFile.is_open())
+        {
+            std::getline(inFile, argsStr);
+            inFile.close();
+        }
+        else
+        {
+            argsStr = "n 31 Oculus_link oculus_link n 10 n n y"; //Default args.
+            std::ofstream outFile(addonPath + "\\args.txt");
+            outFile << argsStr;
+            outFile.close();
+        }
+        DriverLog(("Using args: " + argsStr).c_str());
+
+        /*std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+        LPCWSTR programPath = converter.from_bytes(addonPath + "\\ovr_test.exe").c_str();
+        LPWSTR args = (wchar_t*)converter.from_bytes(argsStr).c_str();*/
+
+        //Start the program up
+        if (!CreateProcessA(NULL, // Name of program to execute
+            const_cast<char*>((addonPath + "\\ovr_test.exe " + argsStr).c_str()), // Command line
+            NULL, // Process handle not inheritable
+            NULL, // Thread handle not inheritable
+            FALSE, // Set handle inheritance to FALSE
+            0, // No creation flags
+            NULL, // Use parent's environment block
+            NULL, // Use parent's starting directory 
+            &si, // Pointer to STARTUPINFO structure
+            &pi) // Pointer to PROCESS_INFORMATION structure
+            ) DriverLog(GetLastErrorAsString().c_str());
+        else
+        {
+            // Wait until child process exits.
+            WaitForSingleObject(pi.hProcess, INFINITE);
+            DWORD exitCode = 0;
+            GetExitCodeProcess(pi.hProcess, &exitCode);
+            DriverLog((std::string("ovr_test.exe exited prematurely with code ") + std::to_string(exitCode)).c_str());
+            if (exitCode == 2)
+            {
+                DriverLog("Attempting to use the existing instance of ovr_test.exe");
+                //I have set the exit code 2 for the mutex exit in ovr_test.exe.
+                CloseHandle(pi.hProcess);
+                CloseHandle(pi.hThread);
+            }
+            else Cleanup();
+        }
+    }).detach();
+}
+
 EVRInitError CServerDriver_OVRTL::Init(vr::IVRDriverContext* pDriverContext)
 {
+    //I was having an oddity occur where this driver would launch twice so I am using a mutex to prevent that from happening.
+    CreateMutexA(0, FALSE, "Local\\oculus_touch_link_instance_mutex");
+    if (GetLastError() == ERROR_ALREADY_EXISTS)
+    {
+        std::cout << "An instance of ovr_test.exe is already running." << std::endl;
+        return vr::VRInitError_Init_AlreadyRunning;
+    }
+
     VR_INIT_SERVER_DRIVER_CONTEXT(pDriverContext);
     InitDriverLog(vr::VRDriverLog());
 
@@ -1912,16 +2058,28 @@ EVRInitError CServerDriver_OVRTL::Init(vr::IVRDriverContext* pDriverContext)
         0,                       // maximum object size (high-order DWORD)
         sizeof(shared_buffer),                // maximum object size (low-order DWORD)
         L"Global\\oculus_steamvr_touch_controller_data_channel");                 // name of mapping object
+    RunOVRTest();
 #else
+    //My original plan was to integrate the ovr_test app into the steamvr driver like I had done similararly for my own Oculus to SteamVR program, however OVR seems to be very fiddly with initalizing like this for some reason unknown to me.
+    //This dosen't seem to be reliable 100% of the time as it sometimes passes this point before ovr_test is ready but less than 5s have passed, not quite too sure what is happening there.
+    RunOVRTest();
+    for (int i = 0; i < 5; i++)
+    {
+        hMapFile = OpenFileMapping(
+            FILE_MAP_ALL_ACCESS,   // read/write access
+            FALSE,                 // do not inherit the name
+            L"Local\\oculus_steamvr_touch_controller_data_channel");               // name of mapping object
 
-    hMapFile = OpenFileMapping(
-        FILE_MAP_ALL_ACCESS,   // read/write access
-        FALSE,                 // do not inherit the name
-        L"Local\\oculus_steamvr_touch_controller_data_channel");               // name of mapping object
+        //Attempt to open the object up to x times with 1s intervals while ovr_test starts up.
+        if (hMapFile != NULL) break;
+        else Sleep(1000);
+    }
 #endif
+
     if (hMapFile == NULL)
     {
-        std::cout << "Could not create file mapping object " << GetLastError() << std::endl;
+        //std::cout << "Could not create file mapping object " << GetLastError() << std::endl;
+        DriverLog("Could not create file mapping object " + GetLastError());
         return VRInitError_Init_Internal;
     }
     comm_buffer = (shared_buffer*)MapViewOfFile(hMapFile,   // handle to map object
@@ -2034,6 +2192,16 @@ EVRInitError CServerDriver_OVRTL::Init(vr::IVRDriverContext* pDriverContext)
 
 void CServerDriver_OVRTL::Cleanup()
 {
+    DriverLog("Unloading OculusTouchLink.");
+
+    if (WaitForSingleObject(pi.hProcess, 0) == WAIT_TIMEOUT)
+    {
+        //This dosent seem to be reached when the host is exited, not sure why as this function should run.
+        // Close process and thread handles. 
+        CloseHandle(pi.hProcess);
+        CloseHandle(pi.hThread);
+    }
+
     log_to_buffer(__func__);
     CleanupDriverLog();
 #ifdef ADD_HMD
