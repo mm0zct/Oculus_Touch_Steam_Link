@@ -2,7 +2,7 @@
 <Project>
   <ProjectOutputs>
     <ProjectOutput>
-      <FullPath>C:\Users\Sinus\Source\Repos\Oculus_Touch_Steam_Link_mm0zct\CustomHMD\Release\x64\driver_OculusTouchLink.dll</FullPath>
+      <FullPath>D:\kOFRe\Documents\GitHub\ReadieFur\OculusTouchSteamLink\CustomHMD\Release\x64\driver_OculusTouchLink.dll</FullPath>
     </ProjectOutput>
   </ProjectOutputs>
   <ContentFiles />
