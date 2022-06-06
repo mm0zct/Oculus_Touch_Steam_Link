@@ -36,8 +36,10 @@ struct shared_buffer {
     bool external_tracking;
     ovrTrackingState tracking_state;
     uint32_t num_objects;
-    ovrPoseStatef object_poses[4];
+    ovrPoseStatef object_poses[4]; //Support up to 4 devices.
     bool track_hmd;
+    unsigned int num_sensors;
+    ovrTrackerPose sensor_poses[4];
 };
 
 DirectX11 DIRECTX;
@@ -50,9 +52,10 @@ uint8_t future_vib_buffer[2][1024] = { {0},{0} };
 void add_vibration(bool isRightHand, float amplitude, float frequency, float duration);
 void main_loop(ovrSession mSession, HANDLE comm_mutex, shared_buffer* comm_buffer, uint64_t frame_count, ovrHapticsBuffer& vibuffer, uint8_t* buf, unsigned int sizeof_buf) {
 
+    WaitForSingleObject(comm_mutex, INFINITE);
+
     ovrTrackingState ss = ovr_GetTrackingState(mSession, 0, false);
 
-    WaitForSingleObject(comm_mutex, INFINITE);
     if (comm_buffer->logging_offset) {
         for (int i = 0; i < comm_buffer->logging_offset; i++) {
             putc(comm_buffer->logging_buffer[i], stdout);
@@ -85,6 +88,8 @@ void main_loop(ovrSession mSession, HANDLE comm_mutex, shared_buffer* comm_buffe
                 ovr_pose.ThePose.Position.z << std::endl;
         }
     }
+
+    for (int i = 0; i < comm_buffer->num_sensors; i++) comm_buffer->sensor_poses[i] = ovr_GetTrackerPose(mSession, i);
 
     for (int i = 0; i < 2; i++) {
 
@@ -304,6 +309,9 @@ void GuardianSystemDemo::Start(HINSTANCE hinst, shared_buffer* comm_buffer, HAND
     //mLastUpdateClock = std::chrono::high_resolution_clock::now();
  
     comm_buffer->num_objects = (ovr_GetConnectedControllerTypes(mSession) >> 8) & 0xf;
+    //if (comm_buffer->num_objects > 4) comm_buffer->num_objects = 4;
+    comm_buffer->num_sensors = ovr_GetTrackerCount(mSession);
+    //if (comm_buffer->num_sensors > 4) comm_buffer->num_sensors = 4;
     
     WaitForSingleObject(
         comm_mutex,    // handle to mutex
@@ -420,8 +428,10 @@ void no_graphics_start(shared_buffer* comm_buffer, HANDLE comm_mutex) {
         if (OVR_FAILURE(ovr_SetTrackingOriginType(mSession, ovrTrackingOrigin_FloorLevel)))  std::cout << "ovr_SetTrackingOriginType error" << std::endl;
     }
 
-
     comm_buffer->num_objects = (ovr_GetConnectedControllerTypes(mSession) >> 8) & 0xf;
+    //if (comm_buffer->num_objects > 4) comm_buffer->num_objects = 4;
+    comm_buffer->num_sensors = ovr_GetTrackerCount(mSession);
+    //if (comm_buffer->num_sensors > 4) comm_buffer->num_sensors = 4;
 
     std::thread vib_thread(vibration_thread, mSession);
     //vibration_thread(mSession);
@@ -465,6 +475,14 @@ void no_graphics_start(shared_buffer* comm_buffer, HANDLE comm_mutex) {
 
 int main(int argc, char** argsv)
 {
+    //Limit to one instance.
+    CreateMutexA(0, FALSE, "Local\\ovr_test_instance_mutex");
+    if (GetLastError() == ERROR_ALREADY_EXISTS)
+    {
+        std::cout << "An instance of ovr_test.exe is already running." << std::endl;
+        return 2; //2 for this mutex exit (I didn't use -2 becuase the wrap around number seemed to be unpredictable, and as there is no standard aside from 0 for exit codes, it seemed ok to do).
+    }
+
     std::cout << "Welcome to oculus_touch_link, this program provides the input and haptic link to the stream driver, as well as passing confuguration data" << std::endl;
     std::cout << "You can provide this program with arguments to specify:" << std::endl;
     std::cout << "Render to Oculus headset y/n  (\"n\" must be use with ovr_dummy.exe)" << std::endl;
@@ -512,7 +530,6 @@ int main(int argc, char** argsv)
         0,
         sizeof(shared_buffer)))shared_buffer();
 
-
     if (comm_buffer == NULL)
     {
         std::cout << "Could not map view of file " << GetLastError() << std::endl;
@@ -524,7 +541,7 @@ int main(int argc, char** argsv)
     comm_buffer->logging_offset = 0;
     bool do_rendering = false;
     if (argc < 9) {
-        std::cout << " <9 arguments, using defaults: n 31 Oculus_link oculus_link n 16 n n y" << std::endl;
+        std::cout << "<9 arguments, using defaults: n 31 Oculus_link oculus_link n 16 n n y" << std::endl;
         do_rendering = false;
         comm_buffer->vr_universe = 31;
         strncpy_s(comm_buffer->manufacturer_name, "Oculus_link", 127);
@@ -536,6 +553,16 @@ int main(int argc, char** argsv)
         comm_buffer->track_hmd = true;
     }
     else {
+        std::cout << "Using arguments: " << argsv[1]
+            << " " << argsv[2]
+            << " " << argsv[3]
+            << " " << argsv[4]
+            << " " << argsv[5]
+            << " " << argsv[6]
+            << " " << argsv[7]
+            << " " << argsv[8]
+            << " " << argsv[9]
+            << std::endl;
         do_rendering = (std::string(argsv[1]) == "y");
         comm_buffer->vr_universe = atoi(argsv[2]);
         strncpy_s(comm_buffer->manufacturer_name, argsv[3], 127);
