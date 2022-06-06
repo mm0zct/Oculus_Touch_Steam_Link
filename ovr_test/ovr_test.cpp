@@ -36,8 +36,10 @@ struct shared_buffer {
     bool external_tracking;
     ovrTrackingState tracking_state;
     uint32_t num_objects;
-    ovrPoseStatef object_poses[4];
+    ovrPoseStatef object_poses[4]; //Support up to 4 devices.
     bool track_hmd;
+    unsigned int num_sensors;
+    ovrTrackerPose sensor_poses[4];
 };
 
 DirectX11 DIRECTX;
@@ -50,9 +52,10 @@ uint8_t future_vib_buffer[2][1024] = { {0},{0} };
 void add_vibration(bool isRightHand, float amplitude, float frequency, float duration);
 void main_loop(ovrSession mSession, HANDLE comm_mutex, shared_buffer* comm_buffer, uint64_t frame_count, ovrHapticsBuffer& vibuffer, uint8_t* buf, unsigned int sizeof_buf) {
 
+    WaitForSingleObject(comm_mutex, INFINITE);
+
     ovrTrackingState ss = ovr_GetTrackingState(mSession, 0, false);
 
-    WaitForSingleObject(comm_mutex, INFINITE);
     if (comm_buffer->logging_offset) {
         for (int i = 0; i < comm_buffer->logging_offset; i++) {
             putc(comm_buffer->logging_buffer[i], stdout);
@@ -85,6 +88,8 @@ void main_loop(ovrSession mSession, HANDLE comm_mutex, shared_buffer* comm_buffe
                 ovr_pose.ThePose.Position.z << std::endl;
         }
     }
+
+    for (int i = 0; i < comm_buffer->num_sensors; i++) comm_buffer->sensor_poses[i] = ovr_GetTrackerPose(mSession, i);
 
     for (int i = 0; i < 2; i++) {
 
@@ -304,6 +309,9 @@ void GuardianSystemDemo::Start(HINSTANCE hinst, shared_buffer* comm_buffer, HAND
     //mLastUpdateClock = std::chrono::high_resolution_clock::now();
  
     comm_buffer->num_objects = (ovr_GetConnectedControllerTypes(mSession) >> 8) & 0xf;
+    //if (comm_buffer->num_objects > 4) comm_buffer->num_objects = 4;
+    comm_buffer->num_sensors = ovr_GetTrackerCount(mSession);
+    //if (comm_buffer->num_sensors > 4) comm_buffer->num_sensors = 4;
     
     WaitForSingleObject(
         comm_mutex,    // handle to mutex
@@ -420,8 +428,10 @@ void no_graphics_start(shared_buffer* comm_buffer, HANDLE comm_mutex) {
         if (OVR_FAILURE(ovr_SetTrackingOriginType(mSession, ovrTrackingOrigin_FloorLevel)))  std::cout << "ovr_SetTrackingOriginType error" << std::endl;
     }
 
-
     comm_buffer->num_objects = (ovr_GetConnectedControllerTypes(mSession) >> 8) & 0xf;
+    //if (comm_buffer->num_objects > 4) comm_buffer->num_objects = 4;
+    comm_buffer->num_sensors = ovr_GetTrackerCount(mSession);
+    //if (comm_buffer->num_sensors > 4) comm_buffer->num_sensors = 4;
 
     std::thread vib_thread(vibration_thread, mSession);
     //vibration_thread(mSession);
