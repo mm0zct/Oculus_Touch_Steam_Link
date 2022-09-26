@@ -38,6 +38,7 @@ struct shared_buffer {
     uint32_t num_objects;
     ovrPoseStatef object_poses[4];
     bool track_hmd;
+    bool update_offsets;
 };
 
 DirectX11 DIRECTX;
@@ -48,7 +49,19 @@ double vib_buf_time[2] = { 0 };
 uint8_t future_vib_buffer[2][1024] = { {0},{0} };
 
 void add_vibration(bool isRightHand, float amplitude, float frequency, float duration);
+
+bool just_updated;
 void main_loop(ovrSession mSession, HANDLE comm_mutex, shared_buffer* comm_buffer, uint64_t frame_count, ovrHapticsBuffer& vibuffer, uint8_t* buf, unsigned int sizeof_buf) {
+    
+    if ((GetKeyState(VK_RETURN) < 0 || GetKeyState(VK_SPACE) < 0) && GetForegroundWindow() == GetConsoleWindow()) { // kinda scuffed
+        if (!just_updated)
+            comm_buffer->update_offsets = true;
+        just_updated = true;
+    }
+    else
+    {
+        just_updated = false;
+    }
 
     ovrTrackingState ss = ovr_GetTrackingState(mSession, 0, false);
 
@@ -546,6 +559,8 @@ int main(int argc, char** argsv)
         comm_buffer->external_tracking = (std::string(argsv[8]) == "y");
         comm_buffer->track_hmd = (std::string(argsv[9]) == "y");
     }
+
+    comm_buffer->update_offsets = true;
 
     HANDLE comm_mutex = CreateMutex(0, true, L"Local\\oculus_steamvr_touch_controller_mutex");
     //MessageBox(NULL, pBuf, TEXT("Process2"), MB_OK);

@@ -1,4 +1,4 @@
-
+﻿
 //============ Copyright (c) Valve Corporation, All rights reserved. ============
 
 #include <openvr_driver.h>
@@ -47,6 +47,8 @@ using namespace vr;
 HANDLE comm_mutex;
 #endif
 
+EXTERN_C IMAGE_DOS_HEADER __ImageBase;
+
 
 struct shared_buffer {
     ovrInputState input_state;
@@ -68,6 +70,7 @@ struct shared_buffer {
     uint32_t num_objects;
     ovrPoseStatef object_poses[4];
     bool track_hmd;
+    bool update_offsets;
 };
 
 
@@ -95,6 +98,9 @@ void log_to_buffer(std::string s) {
 #else
 #error "Unsupported Platform."
 #endif
+
+ovrVector3f offset_pos;
+ovrQuatf offset_rot;
 
 inline HmdQuaternion_t HmdQuaternion_Init(double w, double x, double y, double z)
 {
@@ -393,18 +399,24 @@ public:
         pose.poseIsValid = true;
         pose.result = TrackingResult_Running_OK;
         pose.deviceIsConnected = true;
+
+        ovrQuatf temp_quat = ovrQuatfmul(ovr_pose.ThePose.Orientation, offset_rot);
+        ovrVector3f temp_pos = rotateVector(ovr_pose.ThePose.Position, offset_rot);
+        temp_pos.x += offset_pos.x;
+        temp_pos.y += offset_pos.y;
+        temp_pos.z += offset_pos.z;
         
-        pose.qRotation.w = ovr_pose.ThePose.Orientation.w;
-        pose.qRotation.x = ovr_pose.ThePose.Orientation.x;
-        pose.qRotation.y = ovr_pose.ThePose.Orientation.y;
-        pose.qRotation.z = ovr_pose.ThePose.Orientation.z;
+        pose.qRotation.w = temp_quat.w;
+        pose.qRotation.x = temp_quat.x;
+        pose.qRotation.y = temp_quat.y;
+        pose.qRotation.z = temp_quat.z;
 
-        pose.vecPosition[0] = ovr_pose.ThePose.Position.x;
-        pose.vecPosition[1] = ovr_pose.ThePose.Position.y;
-        pose.vecPosition[2] = ovr_pose.ThePose.Position.z;
+        pose.vecPosition[0] = temp_pos.x;
+        pose.vecPosition[1] = temp_pos.y;
+        pose.vecPosition[2] = temp_pos.z;
 
-        ovrVector3f linAcc = (ovr_pose.LinearAcceleration);
-        ovrVector3f linVel = (ovr_pose.LinearVelocity);
+        ovrVector3f linAcc = rotateVector(ovr_pose.LinearAcceleration, offset_rot);
+        ovrVector3f linVel = rotateVector(ovr_pose.LinearVelocity, offset_rot);
         
         
         pose.vecAcceleration[0] = linAcc.x;
@@ -859,13 +871,13 @@ public:                                                                         
             left_hand_offset.x = -left_hand_offset.x;
             hand_voffset = rotateVector2(left_hand_offset, hand_input);
         }
-        
 
-        //hand_result = ovrQuatfmul(overall_rotation, hand_result);
-        pose.qRotation.w = hand_result.w;
-        pose.qRotation.x = hand_result.x;
-        pose.qRotation.y = hand_result.y;
-        pose.qRotation.z = hand_result.z;
+        ovrQuatf temp_quat = ovrQuatfmul(hand_result, offset_rot);        
+        pose.qRotation.w = temp_quat.w;
+        pose.qRotation.x = temp_quat.x;
+        pose.qRotation.y = temp_quat.y;
+        pose.qRotation.z = temp_quat.z;
+        
         ovrVector3f position;
         if (comm_buffer->be_objects) {
             position.x = ss.HandPoses[isRightHand].ThePose.Position.x;
@@ -876,6 +888,10 @@ public:                                                                         
             position.y = ss.HandPoses[isRightHand].ThePose.Position.y + hand_voffset.y + hand_offset2.y;
             position.z = ss.HandPoses[isRightHand].ThePose.Position.z + hand_voffset.z + hand_offset2.z;
         }
+        position = rotateVector(position, offset_rot);
+        position.x += offset_pos.x;
+        position.y += offset_pos.y;
+        position.z += offset_pos.z;
         //position = rotateVector2(position, overall_rotation);
         pose.vecPosition[0] = position.x;// +overall_offset.x;
         pose.vecPosition[1] = position.y;// +overall_offset.y;
@@ -883,8 +899,8 @@ public:                                                                         
         
 
 
-        ovrVector3f linAcc = (ss.HandPoses[isRightHand].LinearAcceleration);
-        ovrVector3f linVel = (ss.HandPoses[isRightHand].LinearVelocity);
+        ovrVector3f linAcc = rotateVector(ss.HandPoses[isRightHand].LinearAcceleration, offset_rot);
+        ovrVector3f linVel = rotateVector(ss.HandPoses[isRightHand].LinearVelocity, offset_rot);
         ovrQuatf hand_nqoffset = { 0.3420201, 0, 0, -0.9396926 };
         /*linAcc = rotateVector2(linAcc, hand_qoffset);
         linVel = rotateVector2(linVel, hand_nqoffset);*/    //do not do this
@@ -1562,17 +1578,23 @@ public:                                                                         
         pose.vecPosition[1] = position.y;// +overall_offset.y;
         pose.vecPosition[2] = position.z;// +overall_offset.z;
 #else
-        pose.qRotation.w = ovr_pose.ThePose.Orientation.w;
-        pose.qRotation.x = ovr_pose.ThePose.Orientation.x;
-        pose.qRotation.y = ovr_pose.ThePose.Orientation.y;
-        pose.qRotation.z = ovr_pose.ThePose.Orientation.z;
+        ovrQuatf temp_quat = ovrQuatfmul(ovr_pose.ThePose.Orientation, offset_rot);
+        ovrVector3f temp_pos = rotateVector(ovr_pose.ThePose.Position, offset_rot);
+        temp_pos.x += offset_pos.x;
+        temp_pos.y += offset_pos.y;
+        temp_pos.z += offset_pos.z;
 
-        pose.vecPosition[0] = ovr_pose.ThePose.Position.x;
-        pose.vecPosition[1] = ovr_pose.ThePose.Position.y;
-        pose.vecPosition[2] = ovr_pose.ThePose.Position.z;
+        pose.qRotation.w = temp_quat.w;
+        pose.qRotation.x = temp_quat.x;
+        pose.qRotation.y = temp_quat.y;
+        pose.qRotation.z = temp_quat.z;
+
+        pose.vecPosition[0] = temp_pos.x;
+        pose.vecPosition[1] = temp_pos.y;
+        pose.vecPosition[2] = temp_pos.z;
 #endif
-        ovrVector3f linAcc = (ovr_pose.LinearAcceleration);
-        ovrVector3f linVel = (ovr_pose.LinearVelocity);
+        ovrVector3f linAcc = rotateVector(ovr_pose.LinearAcceleration, offset_rot);
+        ovrVector3f linVel = rotateVector(ovr_pose.LinearVelocity, offset_rot);
 
         ovrQuatf hand_nqoffset = { 0.3420201, 0, 0, -0.9396926 };
         /*linAcc = rotateVector2(linAcc, hand_qoffset);
@@ -2004,6 +2026,20 @@ void CServerDriver_OVRTL::Cleanup()
 #endif
 }
 
+ovrQuatf quaternion_from_euler(ovrVector3f eular) {
+    float qx = sin(eular.x / 2.f) * cos(eular.y / 2.f) * cos(eular.z / 2.f) - cos(eular.x / 2.f) * sin(eular.y / 2.f) * sin(eular.z / 2.f);
+    float qy = cos(eular.x / 2.f) * sin(eular.y / 2.f) * cos(eular.z / 2.f) + sin(eular.x / 2.f) * cos(eular.y / 2.f) * sin(eular.z / 2.f);
+    float qz = cos(eular.x / 2.f) * cos(eular.y / 2.f) * sin(eular.z / 2.f) - sin(eular.x / 2.f) * sin(eular.y / 2.f) * cos(eular.z / 2.f);
+    float qw = cos(eular.x / 2.f) * cos(eular.y / 2.f) * cos(eular.z / 2.f) + sin(eular.x / 2.f) * sin(eular.y / 2.f) * sin(eular.z / 2.f);
+
+    ovrQuatf quat; // :(
+    quat.x = qx;
+    quat.y = qy;
+    quat.z = qz;
+    quat.w = qw;
+
+    return quat;
+}
 
 void CServerDriver_OVRTL::RunFrame()
 {
@@ -2022,6 +2058,60 @@ void CServerDriver_OVRTL::RunFrame()
         m_pRController->RunFrame();
     }
     for (CSampleTrackerDriver* t : trackers) t->RunFrame();
+
+    if (comm_buffer->update_offsets) { // Update Offsets
+        comm_buffer->update_offsets = false;
+        
+        TCHAR strDLLPath1[_MAX_PATH];
+        GetModuleFileName((HINSTANCE)&__ImageBase, strDLLPath1, _MAX_PATH);
+
+        std::wstring wpath(&strDLLPath1[0]);
+        std::string path = std::string(wpath.begin(), wpath.end());
+
+        const size_t last_slash_idx = path.rfind('\\');
+
+        if (std::string::npos != last_slash_idx)
+        {
+            path = path.substr(0, last_slash_idx) + "\\..\\..\\offsets.txt";
+        }
+
+        log_to_buffer("Reloaded offsets");
+
+        std::ifstream offset_file;
+        offset_file.open(path);
+        
+        std::string line;
+        int current_line = 0;
+        ovrVector3f temp_rot;
+        while (std::getline(offset_file, line)) {
+            switch (current_line) { // Ssshh, you don't see this, not here
+            case 1: // natta here
+                offset_pos.x = std::stof(line);
+                break;
+            case 2:
+                offset_pos.y = std::stof(line);
+                break;
+            case 3:
+                offset_pos.z = std::stof(line);
+                break;
+            case 5:
+                temp_rot.x = std::stof(line);
+                break;
+            case 6:
+                temp_rot.y = std::stof(line);
+                break;
+            case 7:
+                temp_rot.z = std::stof(line);
+                break;
+            }
+            
+            log_to_buffer(line);
+            current_line++;
+        }
+        offset_rot = quaternion_from_euler(temp_rot);
+
+        offset_file.close();
+    }
 
     vr::VREvent_t vrEvent;
     while (vr::VRServerDriverHost()->PollNextEvent(&vrEvent, sizeof(vrEvent)))
