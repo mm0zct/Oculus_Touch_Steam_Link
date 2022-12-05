@@ -42,11 +42,18 @@ struct shared_buffer {
 
 DirectX11 DIRECTX;
 
+uint8_t min_amplitude;
+float amplitude_scale;
 uint32_t future_vib_buffer_index[2] = { 0 };
 double vib_buf_time[2] = { 0 };
 //uint8_t future_vib_buffer[1024] = { 0 };
 uint8_t future_vib_buffer[2][1024] = { {0},{0} };
+bool future_vib_buffer_used[2][1024] = { {0},{0} };
+uint8_t future_vib_buffer_freq[2][1024] = { {0},{0} };
+uint8_t future_vib_buffer_freq_sample[2][1024] = { {0},{0} };
 
+
+void vibration_thread(ovrSession mSession);
 void add_vibration(bool isRightHand, float amplitude, float frequency, float duration);
 void main_loop(ovrSession mSession, HANDLE comm_mutex, shared_buffer* comm_buffer, uint64_t frame_count, ovrHapticsBuffer& vibuffer, uint8_t* buf, unsigned int sizeof_buf) {
 
@@ -398,7 +405,6 @@ void GuardianSystemDemo::Render()
     }
 }
 
-void vibration_thread(ovrSession mSession);
 
 void no_graphics_start(shared_buffer* comm_buffer, HANDLE comm_mutex) {
     ovrSession mSession = nullptr;
@@ -476,12 +482,14 @@ int main(int argc, char** argsv)
     std::cout << "All controllers are tracked objects instead of controllers y/n" << std::endl;
     std::cout << "Perform tracking in ovr_test instead of steamvr driver y/n" << std::endl;
     std::cout << "Track the headset as a tracking object y/n" << std::endl;
+    std::cout << "Minumim haptic amplitude 0-255 (64)" << std::endl;
+    std::cout << "haptic scale multiplier 0-inf (1.0)" << std::endl;
     std::cout << "" << std::endl;
     std::cout << "This program is super dumb and expects all of the arguments or none (for defaults), suggested invocations:" << std::endl;
-    std::cout << "ovr_test.exe n 1 Oculus oculus n 10 n n(must be use with ovr_dummy.exe)" << std::endl;
-    std::cout << "ovr_test.exe y 1 Oculus oculus y 10 n n" << std::endl;
-    std::cout << "ovr_test.exe y 31 Oculus_link oculus_link n 10 n y n" << std::endl;
-    std::cout << "ovr_test.exe n 31 Oculus_link oculus_link n 10 n n y(default)" << std::endl;
+    std::cout << "ovr_test.exe n 1 Oculus oculus n 10 n n 64 1.0(must be use with ovr_dummy.exe)" << std::endl;
+    std::cout << "ovr_test.exe y 1 Oculus oculus y 10 n n 64 1.0" << std::endl;
+    std::cout << "ovr_test.exe y 31 Oculus_link oculus_link n 10 n y n 64 1.0" << std::endl;
+    std::cout << "ovr_test.exe n 31 Oculus_link oculus_link n 10 n n y 64 1.0(default)" << std::endl;
 
 
     HANDLE hMapFile;
@@ -523,7 +531,7 @@ int main(int argc, char** argsv)
     }
     comm_buffer->logging_offset = 0;
     bool do_rendering = false;
-    if (argc < 9) {
+    if (argc < 11) {
         std::cout << " <9 arguments, using defaults: n 31 Oculus_link oculus_link n 16 n n y" << std::endl;
         do_rendering = false;
         comm_buffer->vr_universe = 31;
@@ -533,7 +541,9 @@ int main(int argc, char** argsv)
         comm_buffer->extra_prediction_ms = 16.0f;
         comm_buffer->be_objects = false;
         comm_buffer->external_tracking = false;
-        comm_buffer->track_hmd = true;
+        comm_buffer->track_hmd = false;
+        min_amplitude = 64;
+        amplitude_scale = 1.0;
     }
     else {
         do_rendering = (std::string(argsv[1]) == "y");
@@ -545,6 +555,8 @@ int main(int argc, char** argsv)
         comm_buffer->be_objects = (std::string(argsv[7]) == "y");
         comm_buffer->external_tracking = (std::string(argsv[8]) == "y");
         comm_buffer->track_hmd = (std::string(argsv[9]) == "y");
+        min_amplitude = strtoul(argsv[10],0, 10);
+        amplitude_scale = strtof(argsv[11],0);
     }
 
     HANDLE comm_mutex = CreateMutex(0, true, L"Local\\oculus_steamvr_touch_controller_mutex");
@@ -594,15 +606,53 @@ std::vector<uint8_t> pulse_patterns[17] = {
     {64,128,196,255,255,128,64,32,0,0,0,0,0,0,0,0}
 };
 
+
+uint8_t clamp_scale(uint8_t sample, float amplitude) {
+    float scale = amplitude * amplitude_scale;
+    uint64_t output = static_cast<float>(sample) * scale;
+    if (output > 255) output = 255;
+    if (output < min_amplitude) output = min_amplitude;
+    return (uint8_t)output & 0xFF;
+}
+
+
+void add_vib_sample(bool isRightHand, uint8_t sample, uint32_t offset, uint8_t pulse_pattern_index, uint8_t pulse_pattern_offset) {
+    future_vib_buffer[isRightHand][offset % 1024] = sample;
+    future_vib_buffer_freq[isRightHand][offset % 1024] = pulse_pattern_index;
+    future_vib_buffer_freq_sample[isRightHand][offset % 1024] = pulse_pattern_offset;
+}
+
+void add_vib_sample_part1(bool isRightHand, uint8_t pulse_pattern_index, uint32_t sample_count, float amplitude) {
+
+    uint64_t sample_offset = 0;
+    uint64_t vib_buffer_sample_delta = ((ovr_GetTimeInSeconds() - vib_buf_time[isRightHand]) * 320);
+    uint64_t previous_index = (future_vib_buffer_index[isRightHand] + vib_buffer_sample_delta +(1024-1)) % 1024;
+    uint64_t next_index = (future_vib_buffer_index[isRightHand] + vib_buffer_sample_delta) % 1024;
+    if (future_vib_buffer_used[isRightHand][previous_index]) {
+        if (future_vib_buffer_freq[isRightHand][previous_index] == pulse_pattern_index) {
+            sample_offset = future_vib_buffer_freq_sample[isRightHand][previous_index];
+        }
+    }
+    
+    
+    for (int i = 0; i < sample_count; i++) {
+        uint8_t sample_value = pulse_patterns[pulse_pattern_index][(sample_offset + i) % pulse_pattern_index];
+        add_vib_sample(isRightHand, clamp_scale(sample_value, amplitude), next_index + i, pulse_pattern_index, (sample_offset + i) % pulse_pattern_index);
+
+    }
+
+}
+
 void add_vibration(bool isRightHand, float amplitude, float frequency, float duration) {
 
     std::cout << " adding haptic for amplitude " << amplitude << " frequency " << frequency << " duration " << duration << std::endl;
-    if (duration < 0) duration = 0;
+
+    if ((amplitude <= 0) || (frequency <= 0) || (duration <= 0)) return;
+
     float amp = amplitude/100.0f;
     float freq = frequency * 320.0f;
-    if (amplitude >= 100.0f) amp = 1.0f;
-    if (amp < 128.0/256) amp = 128.0/256;
     uint32_t requested_duration = duration * 320; // 320 Hz processing rate
+    if (requested_duration < 2) requested_duration = 2;
     uint32_t min_duration = 1;
     uint32_t pulse_width = 1;
     if (freq < 160) {
@@ -635,18 +685,14 @@ void add_vibration(bool isRightHand, float amplitude, float frequency, float dur
   //  std::cout << " adding haptic for amplitude " << amplitude << " -> " << amp << " frequency " << frequency << " -> " << freq << " duration " << duration << " ->" << requested_duration
     //    <<" pulse_width " << pulse_width << std::endl;
   
-    uint64_t vib_buffer_sample_delta = ((ovr_GetTimeInSeconds() - vib_buf_time[isRightHand]) * 320);
+
       std::cout << " adding haptic for amplitude " << amplitude << " -> " << amp << " frequency " << frequency << " -> " << freq << " duration " << duration << " ->" << requested_duration
-      <<" pulse_width " << pulse_width << " delta " << vib_buffer_sample_delta << std::endl;
-    for (int i = 0; i < requested_duration; i++) {
-        add_vib_sample(isRightHand, pulse_patterns[min_duration][(future_vib_buffer_index[isRightHand] + vib_buffer_sample_delta + i) % min_duration] * amp, i + vib_buffer_sample_delta);
-    }
+      <<" pulse_width " << pulse_width << std::endl;
+      
+      add_vib_sample_part1(isRightHand, min_duration, requested_duration, amp);
 
 }
 
-void add_vib_sample(bool isRightHand, uint8_t sample, uint32_t offset) {
-    future_vib_buffer[isRightHand][(future_vib_buffer_index[isRightHand] + offset)%1024] = sample;
-}
 
 void vibration_thread(ovrSession mSession) {
     unsigned char buf[8];
@@ -662,6 +708,9 @@ void vibration_thread(ovrSession mSession) {
             for (int i = 0; i < 8; i++) {
                 buf[i] = future_vib_buffer[hand][future_vib_buffer_index[hand] + i];
                 future_vib_buffer[hand][future_vib_buffer_index[hand] + i] = 0;
+                future_vib_buffer_freq[hand][future_vib_buffer_index[hand] + i] = 0;
+                future_vib_buffer_freq_sample[hand][future_vib_buffer_index[hand] + i] = 0;
+                future_vib_buffer_used[hand][future_vib_buffer_index[hand] + i] = false;
             }
             ovrTouchHapticsDesc desc = ovr_GetTouchHapticsDesc(mSession, (hand==0)?ovrControllerType_LTouch: ovrControllerType_RTouch);
             //std::cout << "SampleRate " << desc.SampleRateHz << " SampleSize " << desc.SampleSizeInBytes << " MaxSamples " << desc.SubmitMaxSamples << " MinSamples " << desc.SubmitMinSamples << " OptimalSamples " << desc.SubmitOptimalSamples << std::endl;
