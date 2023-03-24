@@ -1,49 +1,13 @@
 // ovr_test.cpp : This file contains the 'main' function. Program execution begins and ends there.
 //
 
-#include <iostream>
 
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
+#include "definitions.h"
 
-#define   OVR_D3D_VERSION 11
-#pragma warning(disable: 4324)
-#include "Win32_DirectXAppUtil.h" // DirectX Helper
-#include <OVR_CAPI_D3D.h>
-
-#include <Windows.h>
-#include <mutex>
-#include <thread>
 
 //#define MAX_HAPTICS
 
-struct shared_buffer {
-    ovrInputState input_state;
-    uint32_t vrEvent_type;
-    float vib_amplitude[2];
-    float vib_frequency[2];
-    float vib_duration_s[2];
-    bool vib_valid[2];
-    uint32_t vr_universe;
-    bool perform_prediction;
-    bool be_objects;
-    float extra_prediction_ms;
-    char tracking_space_name[128]; //oculus or Oculus
-    char manufacturer_name[128]; //Oculus or Oculus_link
-    char logging_buffer[1024];
-    uint64_t logging_offset;
-    bool external_tracking;
-    ovrTrackingState tracking_state;
-    uint32_t num_objects;
-    ovrPoseStatef object_poses[4];
-    bool track_hmd;
-};
 
-DirectX11 DIRECTX;
-
-uint8_t min_amplitude;
-float amplitude_scale;
 uint32_t future_vib_buffer_index[2] = { 0 };
 double vib_buf_time[2] = { 0 };
 //uint8_t future_vib_buffer[1024] = { 0 };
@@ -71,15 +35,15 @@ void main_loop(ovrSession mSession, HANDLE comm_mutex, shared_buffer* comm_buffe
         comm_buffer->vrEvent_type = 0;
     }
 
-    if (comm_buffer->external_tracking) {
-        comm_buffer->tracking_state = ovr_GetTrackingState(mSession, (ovr_GetTimeInSeconds() + (comm_buffer->extra_prediction_ms * 0.001)), ovrTrue);
+    if (comm_buffer->config.external_tracking) {
+        comm_buffer->tracking_state = ovr_GetTrackingState(mSession, (ovr_GetTimeInSeconds() + (comm_buffer->config.extra_prediction_ms * 0.001)), ovrTrue);
     }
 
-    for (int i = 0; i < comm_buffer->num_objects; i++) {
+    for (int i = 0; i < comm_buffer->config.num_objects; i++) {
         ovrTrackedDeviceType deviceType = (ovrTrackedDeviceType)(ovrTrackedDevice_Object0 + i);
         ovrPoseStatef ovr_pose;
 
-        ovr_GetDevicePoses(mSession, &deviceType, 1, (ovr_GetTimeInSeconds() + (comm_buffer->extra_prediction_ms * 0.001)), &ovr_pose);
+        ovr_GetDevicePoses(mSession, &deviceType, 1, (ovr_GetTimeInSeconds() + (comm_buffer->config.extra_prediction_ms * 0.001)), &ovr_pose);
         if ((ovr_pose.ThePose.Orientation.x != 0) && (ovr_pose.ThePose.Orientation.y != 0) && (ovr_pose.ThePose.Orientation.z != 0)){
             comm_buffer->object_poses[i] = ovr_pose;
         }
@@ -184,226 +148,6 @@ void main_loop(ovrSession mSession, HANDLE comm_mutex, shared_buffer* comm_buffe
 
 }
 
-class GuardianSystemDemo
-{
-public:
-    void Start(HINSTANCE hinst, shared_buffer* comm_buffer, HANDLE comm_mutex);
-    void InitRenderTargets(const ovrHmdDesc& hmdDesc);
-
-
-    void  Render();
-
-private:
-    //    XMVECTOR mObjPosition[Scene::MAX_MODELS];                               // Objects cached position 
-    //    XMVECTOR mObjVelocity[Scene::MAX_MODELS];                               // Objects velocity
-    //    Scene mDynamicScene;                                                    // Scene graph
-
-    ovrSession mSession = nullptr;
-    //   high_resolution_clock mLastUpdateClock;                                 // Stores last update time
-    //   float mGlobalTimeSec = 0;                                               // Game global time
-
-    uint32_t mFrameIndex = 0;                                               // Global frame counter
-    ovrPosef mHmdToEyePose[ovrEye_Count] = {};                              // Offset from the center of the HMD to each eye
-    ovrRecti mEyeRenderViewport[ovrEye_Count] = {};                         // Eye render target viewport
-
-    ovrLayerEyeFov mEyeRenderLayer = {};                                    // OVR  - Eye render layers description
-    ovrTextureSwapChain mTextureChain[ovrEye_Count] = {};                   // OVR  - Eye render target swap chain
-    ID3D11DepthStencilView* mEyeDepthTarget[ovrEye_Count] = {};             // DX11 - Eye depth view
-    std::vector<ID3D11RenderTargetView*> mEyeRenderTargets[ovrEye_Count];   // DX11 - Eye render view
-
-    bool mShouldQuit = false;
-    //    bool mSlowMotionMode = false;                                           // Slow motion gets enabled when too close to the boundary
-};
-
-
-void GuardianSystemDemo::InitRenderTargets(const ovrHmdDesc& hmdDesc)
-{
-    // For each eye
-    for (int i = 0; i < ovrEye_Count; ++i) {
-        // Viewport
-        const float kPixelsPerDisplayPixel = 1.0f;
-        ovrSizei idealSize = ovr_GetFovTextureSize(mSession, (ovrEyeType)i, hmdDesc.DefaultEyeFov[i], kPixelsPerDisplayPixel);
-        mEyeRenderViewport[i] = { 0, 0, idealSize.w, idealSize.h };
-
-        // Create Swap Chain
-        ovrTextureSwapChainDesc desc = {
-            ovrTexture_2D, OVR_FORMAT_R8G8B8A8_UNORM_SRGB, 1, idealSize.w, idealSize.h, 1, 1,
-            ovrFalse, ovrTextureMisc_DX_Typeless, ovrTextureBind_DX_RenderTarget
-        };
-
-        // Configure Eye render layers
-        mEyeRenderLayer.Header.Type = ovrLayerType_EyeFov;
-        mEyeRenderLayer.Viewport[i] = mEyeRenderViewport[i];
-        mEyeRenderLayer.Fov[i] = hmdDesc.DefaultEyeFov[i];
-        mHmdToEyePose[i] = ovr_GetRenderDesc(mSession, (ovrEyeType)i, hmdDesc.DefaultEyeFov[i]).HmdToEyePose;
-
-        // DirectX 11 - Generate RenderTargetView from textures in swap chain
-        // ----------------------------------------------------------------------
-        ovrResult result = ovr_CreateTextureSwapChainDX(mSession, DIRECTX.Device, &desc, &mTextureChain[i]);
-        if (!OVR_SUCCESS(result)) {
-            printf("ovr_CreateTextureSwapChainDX failed"); exit(-1);
-        }
-
-        // Render Target, normally triple-buffered
-        int textureCount = 0;
-        ovr_GetTextureSwapChainLength(mSession, mTextureChain[i], &textureCount);
-        for (int j = 0; j < textureCount; ++j) {
-            ID3D11Texture2D* renderTexture = nullptr;
-            ovr_GetTextureSwapChainBufferDX(mSession, mTextureChain[i], j, IID_PPV_ARGS(&renderTexture));
-
-            D3D11_RENDER_TARGET_VIEW_DESC renderTargetViewDesc = {
-                DXGI_FORMAT_R8G8B8A8_UNORM, D3D11_RTV_DIMENSION_TEXTURE2D
-            };
-
-            ID3D11RenderTargetView* renderTargetView = nullptr;
-            DIRECTX.Device->CreateRenderTargetView(renderTexture, &renderTargetViewDesc, &renderTargetView);
-            mEyeRenderTargets[i].push_back(renderTargetView);
-            renderTexture->Release();
-        }
-
-        // DirectX 11 - Generate Depth
-        // ----------------------------------------------------------------------
-        D3D11_TEXTURE2D_DESC depthTextureDesc = {
-            (UINT)idealSize.w, (UINT)idealSize.h, 1, 1, DXGI_FORMAT_D32_FLOAT, {1, 0},
-            D3D11_USAGE_DEFAULT, D3D11_BIND_DEPTH_STENCIL, 0, 0
-        };
-
-        ID3D11Texture2D* depthTexture = nullptr;
-        DIRECTX.Device->CreateTexture2D(&depthTextureDesc, NULL, &depthTexture);
-        DIRECTX.Device->CreateDepthStencilView(depthTexture, NULL, &mEyeDepthTarget[i]);
-        depthTexture->Release();
-    }
-}
-
-
-
-
-void GuardianSystemDemo::Start(HINSTANCE hinst, shared_buffer* comm_buffer, HANDLE comm_mutex)
-{
-    hinst = hinst;
-    ovrResult result;
-    result = ovr_Initialize(nullptr);
-    if (!OVR_SUCCESS(result)) {
-        printf("ovr_Initialize failed"); exit(-1);
-    }
-
-    ovrGraphicsLuid luid;
-    result = ovr_Create(&mSession, &luid);
-    if (!OVR_SUCCESS(result)) {
-        printf("ovr_Create failed"); exit(-1);
-    }
-
-    if (!DIRECTX.InitWindow(0/*hinst*/, L"GuardianSystemDemo")) {
-        printf("DIRECTX.InitWindow failed"); exit(-1);
-    }
-
-    // Use HMD desc to initialize device
-    ovrHmdDesc hmdDesc = ovr_GetHmdDesc(mSession);
-    if (!DIRECTX.InitDevice(hmdDesc.Resolution.w / 2, hmdDesc.Resolution.h / 2, reinterpret_cast<LUID*>(&luid))) {
-        printf("DIRECTX.InitDevice failed"); exit(-1);
-    }
-
-    // Use FloorLevel tracking origin
-    ovr_SetTrackingOriginType(mSession, ovrTrackingOrigin_FloorLevel);
-
-    InitRenderTargets(hmdDesc);
-    //InitSceneGraph();
-    //mLastUpdateClock = std::chrono::high_resolution_clock::now();
- 
-    comm_buffer->num_objects = (ovr_GetConnectedControllerTypes(mSession) >> 8) & 0xf;
-    
-    WaitForSingleObject(
-        comm_mutex,    // handle to mutex
-        INFINITE);  // no time-out interval
-    ReleaseMutex(comm_mutex);
- 
-    // Main Loop
-    uint64_t counter = 0;
-    Render();
-    uint64_t frame_count = 0;
-    uint8_t buf[128] = { 0 };// , 255, 0, 0, 255, 255, 0, 0, 0, 0, 255, 255, 0, 0, 255, 255, 0, 0, 0, 0, 255, 255, 0, 0, 255, 255, 0, 0, 0, 0, 255, 255, 255, 255, 0, 0, 0, 0, 255, 255, 255, 255, 0, 0, 0, 0, 255, 255, 255, 255, 0, 0, 0, 0     };
-    unsigned int sizeof_buf = sizeof(buf);
-    ovrHapticsBuffer vibuffer;
-    vibuffer.Samples = buf;
-    vibuffer.SamplesCount = sizeof_buf;
-    vibuffer.SubmitMode = ovrHapticsBufferSubmit_Enqueue;
-
-    for (int i = 0; i <(sizeof_buf/* / 2*/); i++) {
-        buf[i/* *2*/] = 255;
-    }
-
-    while (DIRECTX.HandleMessages() && !mShouldQuit)
-    {
-        ovrSessionStatus sessionStatus;
-        ovr_GetSessionStatus(mSession, &sessionStatus);
-        if (sessionStatus.ShouldQuit)
-            break;
-
-        main_loop(mSession, comm_mutex, comm_buffer, frame_count, vibuffer, buf, sizeof_buf);
-        
-        if ((frame_count & 0xF) == 0) { // 1000/16 ~= 60Hz, render black frame at 60fps to keep oculus happy
-            Render();
-        }
-
-        frame_count++;
-        Sleep(1);
-
-    }
-
-    ovr_Shutdown();
-}
-
-
-
-void GuardianSystemDemo::Render()
-{
-    // Get current eye pose for rendering
-    double eyePoseTime = 0;
-    ovrPosef eyePose[ovrEye_Count] = {};
-    ovr_GetEyePoses(mSession, mFrameIndex, ovrTrue, mHmdToEyePose, eyePose, &eyePoseTime);
-
-    // Render each eye
-    for (int i = 0; i < ovrEye_Count; ++i) {
-        int renderTargetIndex = 0;
-        ovr_GetTextureSwapChainCurrentIndex(mSession, mTextureChain[i], &renderTargetIndex);
-        ID3D11RenderTargetView* renderTargetView = mEyeRenderTargets[i][renderTargetIndex];
-        ID3D11DepthStencilView* depthTargetView = mEyeDepthTarget[i];
-
-        // Clear and set render/depth target and viewport
-        DIRECTX.SetAndClearRenderTarget(renderTargetView, depthTargetView, 0.0f, 0.0f, 0.0f, 1.0f);  // THE SCREEN RENDER COLOUR
-        DIRECTX.SetViewport((float)mEyeRenderViewport[i].Pos.x, (float)mEyeRenderViewport[i].Pos.y,
-            (float)mEyeRenderViewport[i].Size.w, (float)mEyeRenderViewport[i].Size.h);
-
-        // Eye
-        XMVECTOR eyeRot = XMVectorSet(eyePose[i].Orientation.x, eyePose[i].Orientation.y,
-            eyePose[i].Orientation.z, eyePose[i].Orientation.w);
-        XMVECTOR eyePos = XMVectorSet(eyePose[i].Position.x, eyePose[i].Position.y, eyePose[i].Position.z, 0);
-        XMVECTOR eyeForward = XMVector3Rotate(XMVectorSet(0, 0, -1, 0), eyeRot);
-
-        // Matrices
-        XMMATRIX viewMat = XMMatrixLookAtRH(eyePos, XMVectorAdd(eyePos, eyeForward),
-            XMVector3Rotate(XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f), eyeRot));
-        ovrMatrix4f proj = ovrMatrix4f_Projection(mEyeRenderLayer.Fov[i], 0.001f, 1000.0f, ovrProjection_None);
-        XMMATRIX projMat = XMMatrixTranspose(XMMATRIX(&proj.M[0][0]));
-        XMMATRIX viewProjMat = XMMatrixMultiply(viewMat, projMat);
-
-        // Render and commit to swap chain
-        //mDynamicScene.Render(&viewProjMat, 1.0f, 1.0f, 1.0f, 1.0f, true);
-        ovr_CommitTextureSwapChain(mSession, mTextureChain[i]);
-
-        // Update eye layer
-        mEyeRenderLayer.ColorTexture[i] = mTextureChain[i];
-        mEyeRenderLayer.RenderPose[i] = eyePose[i];
-        mEyeRenderLayer.SensorSampleTime = eyePoseTime;
-    }
-
-    // Submit frames
-    ovrLayerHeader* layers = &mEyeRenderLayer.Header;
-    ovrResult result = ovr_SubmitFrame(mSession, mFrameIndex++, nullptr, &layers, 1);
-    if (!OVR_SUCCESS(result)) {
-        printf("ovr_SubmitFrame failed"); exit(-1);
-    }
-}
 
 
 void no_graphics_start(shared_buffer* comm_buffer, HANDLE comm_mutex) {
@@ -419,15 +163,24 @@ void no_graphics_start(shared_buffer* comm_buffer, HANDLE comm_mutex) {
 
         if (OVR_FAILURE(ovr_Create(&hmd2, &luid2)))  std::cout << "ovr_Create error" << std::endl;
 #endif          
-        if (OVR_FAILURE(ovr_Initialize(&initParams)/*ovr_Initialize(nullptr)*/)) std::cout << "ovr_Initialize error" << std::endl;
+        if (OVR_FAILURE(ovr_Initialize(&initParams)/*ovr_Initialize(nullptr)*/)) {
+            std::cout << "ovr_Initialize error" << std::endl;
+            return;
+        }
 
-        if (OVR_FAILURE(ovr_Create(&mSession, &luid)))  std::cout << "ovr_Create error" << std::endl;
+        if (OVR_FAILURE(ovr_Create(&mSession, &luid))) {
+            std::cout << "ovr_Create error" << std::endl;
+            return;
+        }
 
-        if (OVR_FAILURE(ovr_SetTrackingOriginType(mSession, ovrTrackingOrigin_FloorLevel)))  std::cout << "ovr_SetTrackingOriginType error" << std::endl;
+        if (OVR_FAILURE(ovr_SetTrackingOriginType(mSession, ovrTrackingOrigin_FloorLevel))) {
+            std::cout << "ovr_SetTrackingOriginType error" << std::endl;
+            return;
+        }
     }
 
 
-    comm_buffer->num_objects = (ovr_GetConnectedControllerTypes(mSession) >> 8) & 0xf;
+    comm_buffer->config.num_objects = (ovr_GetConnectedControllerTypes(mSession) >> 8) & 0xf;
 
     std::thread vib_thread(vibration_thread, mSession);
     //vibration_thread(mSession);
@@ -469,6 +222,13 @@ void no_graphics_start(shared_buffer* comm_buffer, HANDLE comm_mutex) {
 }
 
 
+shared_buffer* comm_buffer;
+
+
+GUI_Manager* p_gui_manager = nullptr;
+
+
+
 int main(int argc, char** argsv)
 {
     std::cout << "Welcome to oculus_touch_link, this program provides the input and haptic link to the stream driver, as well as passing confuguration data" << std::endl;
@@ -493,7 +253,7 @@ int main(int argc, char** argsv)
 
 
     HANDLE hMapFile;
-    shared_buffer* comm_buffer;
+ 
 #if 1
     hMapFile = CreateFileMapping(
         INVALID_HANDLE_VALUE,    // use paging file
@@ -530,33 +290,30 @@ int main(int argc, char** argsv)
         return -1;
     }
     comm_buffer->logging_offset = 0;
-    bool do_rendering = false;
     if (argc < 11) {
-        std::cout << " <9 arguments, using defaults: n 31 Oculus_link oculus_link n 16 n n y" << std::endl;
-        do_rendering = false;
-        comm_buffer->vr_universe = 31;
-        strncpy_s(comm_buffer->manufacturer_name, "Oculus_link", 127);
-        strncpy_s(comm_buffer->tracking_space_name, "oculus_link", 127);
-        comm_buffer->perform_prediction = false;
-        comm_buffer->extra_prediction_ms = 16.0f;
-        comm_buffer->be_objects = false;
-        comm_buffer->external_tracking = false;
-        comm_buffer->track_hmd = false;
-        min_amplitude = 64;
-        amplitude_scale = 1.0;
+        std::cout << " <11 arguments, using defaults: n 31 Oculus_link oculus_link n 16 n n y n" << std::endl;
+        comm_buffer->config.do_rendering = false;
+        comm_buffer->config.vr_universe = 31;
+        strncpy_s(comm_buffer->config.manufacturer_name, "Oculus_link", 127);
+        strncpy_s(comm_buffer->config.tracking_space_name, "oculus_link", 127);
+        comm_buffer->config.extra_prediction_ms = 16.0f;
+        comm_buffer->config.be_objects = false;
+        comm_buffer->config.external_tracking = false;
+        comm_buffer->config.track_hmd = false;
+        comm_buffer->config.min_amplitude = 64;
+        comm_buffer->config.amplitude_scale = 10.0;
     }
     else {
-        do_rendering = (std::string(argsv[1]) == "y");
-        comm_buffer->vr_universe = atoi(argsv[2]);
-        strncpy_s(comm_buffer->manufacturer_name, argsv[3], 127);
-        strncpy_s(comm_buffer->tracking_space_name, argsv[4], 127);
-        comm_buffer->perform_prediction = (std::string(argsv[5]) == "y");
-        comm_buffer->extra_prediction_ms = atof(argsv[6]);
-        comm_buffer->be_objects = (std::string(argsv[7]) == "y");
-        comm_buffer->external_tracking = (std::string(argsv[8]) == "y");
-        comm_buffer->track_hmd = (std::string(argsv[9]) == "y");
-        min_amplitude = strtoul(argsv[10],0, 10);
-        amplitude_scale = strtof(argsv[11],0);
+        comm_buffer->config.do_rendering = (std::string(argsv[1]) == "y");
+        comm_buffer->config.vr_universe = atoi(argsv[2]);
+        strncpy_s(comm_buffer->config.manufacturer_name, argsv[3], 127);
+        strncpy_s(comm_buffer->config.tracking_space_name, argsv[4], 127);
+        comm_buffer->config.extra_prediction_ms = atof(argsv[6]);
+        comm_buffer->config.be_objects = (std::string(argsv[7]) == "y");
+        comm_buffer->config.external_tracking = (std::string(argsv[8]) == "y");
+        comm_buffer->config.track_hmd = (std::string(argsv[9]) == "y");
+        comm_buffer->config.min_amplitude = strtoul(argsv[10],0, 10);
+        comm_buffer->config.amplitude_scale = strtof(argsv[11],0);
     }
 
     HANDLE comm_mutex = CreateMutex(0, true, L"Local\\oculus_steamvr_touch_controller_mutex");
@@ -568,7 +325,14 @@ int main(int argc, char** argsv)
     ReleaseMutex(comm_mutex);
 
 
-    if (do_rendering) {
+       
+    std::thread gui_thread([&]() {
+        p_gui_manager = new GUI_Manager(comm_buffer);
+        p_gui_manager->handle_loop();
+        });
+   
+
+    if (comm_buffer->config.do_rendering) {
         GuardianSystemDemo* instance = new (_aligned_malloc(sizeof(GuardianSystemDemo), 16)) GuardianSystemDemo();
         instance->Start(0, comm_buffer, comm_mutex);
         delete instance;
@@ -576,11 +340,14 @@ int main(int argc, char** argsv)
     } else {
         no_graphics_start(comm_buffer, comm_mutex);
     }
-     UnmapViewOfFile(comm_buffer);
 
-     CloseHandle(hMapFile);
-     CloseHandle(comm_mutex);
-     return 0;
+    gui_thread.join();
+
+    UnmapViewOfFile(comm_buffer);
+
+    CloseHandle(hMapFile);
+    CloseHandle(comm_mutex);
+    return 0;
 }
 
 
@@ -608,11 +375,13 @@ std::vector<uint8_t> pulse_patterns[17] = {
 
 
 uint8_t clamp_scale(uint8_t sample, float amplitude) {
-    float scale = amplitude * amplitude_scale;
-    uint64_t output = static_cast<float>(sample) * scale;
+    if (comm_buffer->config.sqrt_pre_filter) amplitude = sqrtf(amplitude);
+    float scale = amplitude * (comm_buffer->config.amplitude_scale);
+    if (comm_buffer->config.sqrt_post_filter) scale = sqrtf(scale);
+    uint64_t output = static_cast<uint64_t> ( static_cast<float>(sample) * scale );
     if (output > 255) output = 255;
-    if (output < min_amplitude) output = min_amplitude;
-    return (uint8_t)output & 0xFF;
+    if (output < comm_buffer->config.min_amplitude) output = comm_buffer->config.min_amplitude;
+    return static_cast<uint8_t>(output & 0xFF);
 }
 
 
@@ -645,9 +414,9 @@ void add_vib_sample_part1(bool isRightHand, uint8_t pulse_pattern_index, uint32_
 
 void add_vibration(bool isRightHand, float amplitude, float frequency, float duration) {
 
-    std::cout << " adding haptic for amplitude " << amplitude << " frequency " << frequency << " duration " << duration << std::endl;
+    //std::cout << " adding haptic for amplitude " << amplitude << " frequency " << frequency << " duration " << duration << std::endl;
 
-    if ((amplitude <= 0) || (frequency <= 0) || (duration <= 0)) return;
+    if ((amplitude <= 0) || (frequency <= 0) /*|| (duration <= 0)*/) return;
 
     float amp = amplitude/100.0f;
     float freq = frequency * 320.0f;

@@ -172,7 +172,11 @@
     <ClCompile Include="driverlog.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Common.h" />
     <ClInclude Include="Headers\driverlog.h" />
+    <ClInclude Include="HeadsetTrackerDriver.h" />
+    <ClInclude Include="TouchControllerDriver.h" />
+    <ClInclude Include="TouchTrackerDriver.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
