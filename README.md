@@ -7,6 +7,8 @@ https://github.com/PumkinSpice/MixedVR/wiki/MixedVR-CV1-Touch
 Prerequisites:
 This SteamVR Driver
 
+ODTKRA https://github.com/DeltaNeverUsed/ODTKRA - this will keep the Oculus runtime and headset awake
+
 A full CV1 touch kit (HMD, two controllers, at least two sensors)
 
 The HMD you want to use. This will work for WMR, Lighthouse HMDs such as Index and Vive (you need BOTH lighthouses and CV1 sensor for lighthouse HMDs), and Quest (Quest will ONLY WORK WITH ALVR OR VIRTUAL DESKTOP). It is possible to do this without the HMD's native controllers by calibrating the CV1 touch controller against the HMD you are using.
@@ -38,7 +40,7 @@ C:\'Program Files (x86)'\Steam\steamapps\common\SteamVR\bin\win64\vrpathreg addd
 If using WMR: Plug the power back into the HMD (or plug USB back into the PC) and wait for WMR portal to come up and start working. Turn on your WMR controllers.
 If using Quest: connect to your PC via ALVR/Virtual Desktop but do nothing else yet except make sure you have staged tracking on. Proceed to step 9.
 If using Vive or Index: Do nothing yet. Proceed to step 9.
-Start ODTKRA, ovr_test.exe and ovr_dummy.exe. Give your oculus HMD a little wiggle for good measure. Pick up an oculus controller and watch the ovr_test.exe console window, make sure the state for the controller turns to 0xf. If it doesn't, move the oculus headset around a bit and make sure a sensor can see it.
+Start ODTKRA https://github.com/DeltaNeverUsed/ODTKRA , ovr_test.exe and ovr_dummy.exe. Give your oculus HMD a little wiggle for good measure. Pick up an oculus controller and watch the ovr_test.exe console window, make sure the state for the controller turns to 0xf. If it doesn't, move the oculus headset around a bit and make sure a sensor can see it.
 
 Put on your main HMD and start steamVR from its native environment
 
