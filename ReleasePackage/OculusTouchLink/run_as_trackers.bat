@@ -1,4 +1,4 @@
-ovr_test.exe n 26 Oculus_link oculus_link n 10 y y y
+ovr_test.exe n 31 HTC lighthouse n 10 y y y 64 10.0
 
 
 
@@ -13,10 +13,12 @@ ovr_test.exe n 26 Oculus_link oculus_link n 10 y y y
 ;;All controllers are tracked objects instead of controllers y/n
 ;;Perform tracking in ovr_test instead of steamvr driver y/n
 ;;Track the headset as a tracking object y/n
+;;minimum haptic value to be generated (0-255)
+;;scale multiplier on input haptic signal 
 
 ;;This program is super dumb and expects all of the arguments or none (for defaults), suggested invocations:
-;;ovr_test.exe n 1 Oculus_link oculus_link n 10 n n n(must be use with ovr_dummy.exe)
-;;ovr_test.exe y 1 Oculus_link oculus_link y 10 n n n
-;;ovr_test.exe y 26 Oculus_link oculus_link n 10 n y n
-;;ovr_test.exe n 26 Oculus_link oculus_link n 10 n n y(default)
-;;defaults: n 26 Oculus_link oculus_link n 16 n n y
+;;ovr_test.exe n 1 Oculus oculus n 10 n n n  64 10.0(must be use with ovr_dummy.exe)
+;;ovr_test.exe y 1 Oculus oculus y 10 n n n 64 10.0
+;;ovr_test.exe y 31 Oculus_link oculus_link n 10 n y n 64 10.0
+;;ovr_test.exe n 31 Oculus_link oculus_link n 10 n n n  64 10.0(default)
+;;defaults: n 31 Oculus_link oculus_link n 10 n n n 64 10.0
