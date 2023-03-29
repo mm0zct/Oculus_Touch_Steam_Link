@@ -35,3 +35,6 @@ ovr_test/.vs/ovr_test/v16/Browse.VC.db
 ovr_test/x64/Release/ovr_test.Build.CppClean.log
 CustomHMD/.vs/CustomHMD/v16/Browse.VC.db
 CustomHMD/.vs/CustomHMD/v16/.suo
+*.vsidx
+*.lock
+ovr_test/.vs/ovr_test/v17/.suo

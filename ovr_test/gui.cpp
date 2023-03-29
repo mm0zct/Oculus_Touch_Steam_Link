@@ -100,8 +100,14 @@ std::vector<config_window_object> config_windows = {
             }
         }
         return;
-    }, [](config_window_object* self, HWND parent, shared_buffer* comm_buffer) { self->parent = parent; return;
-    } }
+    }, [](config_window_object* self, HWND parent, shared_buffer* comm_buffer) {
+        self->parent = parent;
+        const size_t len = 32;
+        WCHAR CompBuffer[len];
+        swprintf_s(CompBuffer, len, L"%u", comm_buffer->config.vr_universe);
+        SetWindowText((HWND)self->wnd, CompBuffer);
+        return;
+    }  }
 ,  {L"Tracker Space Name",L"EDIT", WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_FLAT | BS_TEXT | ES_READONLY,
     default_wm_command, default_init}
 ,  {L"oculus_link",L"EDIT", WS_VISIBLE | WS_CHILD ,
@@ -119,7 +125,13 @@ std::vector<config_window_object> config_windows = {
             }
         }
         return;
-    }, [](config_window_object* self, HWND parent, shared_buffer* comm_buffer) { self->parent = parent; return;
+    }, [](config_window_object* self, HWND parent, shared_buffer* comm_buffer) {
+        self->parent = parent;
+        WCHAR Buffer[256];
+        size_t converted_length;
+        mbstowcs_s(&converted_length,  Buffer, comm_buffer->config.tracking_space_name, sizeof(comm_buffer->config.tracking_space_name) - 1);
+        SetWindowText((HWND)self->wnd, Buffer);
+        return;
     } }
 ,  {L"Manufacturer Name",L"EDIT", WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_FLAT | BS_TEXT | ES_READONLY,
     default_wm_command, default_init }
@@ -138,7 +150,13 @@ std::vector<config_window_object> config_windows = {
             }
         }
         return;
-    }, [](config_window_object* self, HWND parent, shared_buffer* comm_buffer) { self->parent = parent; return;
+    }, [](config_window_object* self, HWND parent, shared_buffer* comm_buffer) {
+        self->parent = parent;
+        WCHAR Buffer[256];
+        size_t converted_length;
+        mbstowcs_s(&converted_length,  Buffer, comm_buffer->config.manufacturer_name, sizeof(comm_buffer->config.manufacturer_name) - 1);
+        SetWindowText((HWND)self->wnd, Buffer);
+        return;
     } }
 ,  {L"Prediction latency (ms)",L"EDIT", WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_FLAT | BS_TEXT | ES_READONLY, 
     default_wm_command, default_init }
@@ -154,7 +172,7 @@ std::vector<config_window_object> config_windows = {
                     WCHAR Buffer[len];
                     WCHAR CompBuffer[len];
                     GetWindowText((HWND)lp, Buffer, len);
-                    std::wcout << L"control text is: " << Buffer << std::endl;
+                    //std::wcout << L"control text is: " << Buffer << std::endl;
                     auto latency = _wtof(Buffer);
                     std::cout << "parsed latency is " << latency << std::endl;
                     swprintf_s(CompBuffer, len, L"%.1f", latency);
@@ -168,7 +186,13 @@ std::vector<config_window_object> config_windows = {
             }
         }
         return;
-    }, [](config_window_object* self, HWND parent, shared_buffer* comm_buffer) {  self->parent = parent; return;
+    },[](config_window_object* self, HWND parent, shared_buffer* comm_buffer) {
+        self->parent = parent;
+        const size_t len = 32;
+        WCHAR CompBuffer[len];
+        swprintf_s(CompBuffer, len, L"%.1f", comm_buffer->config.extra_prediction_ms);
+        SetWindowText((HWND)self->wnd, CompBuffer);
+        return;
     } }
 ,   {L"Haptic Scale Factor",L"EDIT", WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_FLAT | BS_TEXT | ES_READONLY,
      default_wm_command, default_init }
@@ -198,7 +222,14 @@ std::vector<config_window_object> config_windows = {
             }
         }
         return;
-    }, default_init }
+    },  [](config_window_object* self, HWND parent, shared_buffer* comm_buffer) {
+        self->parent = parent;
+        const size_t len = 32;
+        WCHAR CompBuffer[len];
+        swprintf_s(CompBuffer, len, L"%.2f", comm_buffer->config.amplitude_scale);
+        SetWindowText((HWND)self->wnd, CompBuffer);
+        return;
+    } }
 , { L"Haptic Minimum Value",L"EDIT", WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_FLAT | BS_TEXT | ES_READONLY,
         default_wm_command, default_init }
 , { L"64",L"EDIT", WS_VISIBLE | WS_CHILD | ES_NUMBER,
@@ -228,7 +259,14 @@ std::vector<config_window_object> config_windows = {
             }
         }
         return;
-    }, default_init }
+    },  [](config_window_object* self, HWND parent, shared_buffer* comm_buffer) {
+        self->parent = parent;
+        const size_t len = 32;
+        WCHAR CompBuffer[len];
+        swprintf_s(CompBuffer, len, L"%u", comm_buffer->config.min_amplitude);
+        SetWindowText((HWND)self->wnd, CompBuffer);
+        return;
+    } }
 , { L"Haptics sqrt pre-filter",L"BUTTON", WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_FLAT | BS_TEXT | BS_CHECKBOX,
     [](HWND window, WPARAM wp, LPARAM lp, shared_buffer* comm_buffer) {
         BOOL checked = IsDlgButtonChecked(window, wp);
@@ -292,7 +330,6 @@ GUI_Manager::GUI_Manager(shared_buffer* comm_buffer)
 
 }
 
-
     void GUI_Manager::handle_loop() {
         MSG msg;
         while (GetMessage(&msg, 0, 0, 0)) {
@@ -301,6 +338,7 @@ GUI_Manager::GUI_Manager(shared_buffer* comm_buffer)
         }
         std::cout << "GUI thread exiting" << std::endl;
     }
+
 LRESULT CALLBACK GUI_Manager::GUIWndProc(HWND window, UINT msg, WPARAM wp, LPARAM lp)
 {
     switch (msg)
@@ -314,7 +352,7 @@ LRESULT CALLBACK GUI_Manager::GUIWndProc(HWND window, UINT msg, WPARAM wp, LPARA
         break;
 
     case WM_CREATE:
-        std::cout << "WM_CREATE window 0x" << std::hex << window << " wp 0x" << wp << " lp 0x" << lp << std::dec << std::endl;
+ //       std::cout << "WM_CREATE window 0x" << std::hex << window << " wp 0x" << wp << " lp 0x" << lp << std::dec << std::endl;
         //HWND hEdit = CreateWindowEx(WS_EX_CLIENTEDGE, L"BUTTON", L"Enable External Tracking",
 //    WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_FLAT | BS_TEXT | BS_CHECKBOX,
 //    10, 10, 15, 15, window, (HMENU)ExternalTrackingID, GetModuleHandle(NULL), NULL);
@@ -322,7 +360,7 @@ LRESULT CALLBACK GUI_Manager::GUIWndProc(HWND window, UINT msg, WPARAM wp, LPARA
             config.wnd = CreateWindowEx(NULL, config.window_type.c_str(), config.name.c_str(),
                 config.style,
                 10, 20*config.id.get_id(), 300, 20, window, (HMENU)config.id.get_id(), (HINSTANCE)GetWindowLongPtr(window, GWLP_HINSTANCE), NULL);
-            std::cout << std::hex << "adding window 0x" << config.wnd << " to the map" << std::endl;
+  //          std::cout << std::hex << "adding window 0x" << config.wnd << " to the map" << std::endl;
             config_window_map[config.wnd] = &config;
             Edit_Enable(config.wnd, true);
             EnableWindow(config.wnd, true);
@@ -339,7 +377,7 @@ LRESULT CALLBACK GUI_Manager::GUIWndProc(HWND window, UINT msg, WPARAM wp, LPARA
         break;
 
     case WM_COMMAND:
-        std::cout << "WM_COMMAND window 0x" << std::hex << window << " wp 0x" << wp << " lp 0x" << lp << std::dec << std::endl;
+ //       std::cout << "WM_COMMAND window 0x" << std::hex << window << " wp 0x" << wp << " lp 0x" << lp << std::dec << std::endl;
         if (config_window_map.find((HWND)lp) != config_window_map.end()) {
             config_window_map[(HWND)lp]->wm_command(window, wp, lp, comm_buffer);
         }
