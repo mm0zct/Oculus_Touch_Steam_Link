@@ -209,7 +209,15 @@ public:                                                                         
         pose.vecAngularVelocity[2] = ovr_pose.AngularVelocity.z;
 
         //pose.poseTimeOffset = -0.01;
+        if (comm_buffer->config.do_world_transformation) {
+            pose.qWorldFromDriverRotation = comm_buffer->config.world_orientation_q * pose.qWorldFromDriverRotation;
 
+            vr::HmdVector3d_t rotatedTranslation = quaternionRotateVector(comm_buffer->config.world_orientation_q, pose.vecWorldFromDriverTranslation);
+            pose.vecWorldFromDriverTranslation[0] = rotatedTranslation.v[0] + comm_buffer->config.world_translation[0];
+            pose.vecWorldFromDriverTranslation[1] = rotatedTranslation.v[1] + comm_buffer->config.world_translation[1];
+            pose.vecWorldFromDriverTranslation[2] = rotatedTranslation.v[2] + comm_buffer->config.world_translation[2];
+
+        }
         return pose;
     }
 

@@ -61,7 +61,11 @@ struct config_data {
     bool sqrt_pre_filter;
     bool sqrt_post_filter;
     bool do_rendering;
+    bool do_world_transformation;
+    double world_translation[3];
+    vr::HmdQuaternion_t world_orientation_q;
 };
+
 struct shared_buffer {
     config_data config;
     ovrInputState input_state;
@@ -162,6 +166,22 @@ ovrVector3f rotateVector(const ovrVector3f _V, ovrQuatf q) {
     vec.y = 2 * (r * _V.x * k + i * _V.x * j - r * _V.z * i + j * _V.z * k) + _V.y * (r * r - i * i + j * j - k * k);
     vec.z = 2 * (r * _V.y * i - r * _V.x * j + i * _V.x * k + j * _V.y * k) + _V.z * (r * r - i * i - j * j + k * k);
     return vec;
+}
+
+inline vr::HmdQuaternion_t operator*(const vr::HmdQuaternion_t& lhs, const vr::HmdQuaternion_t& rhs) {
+    return {
+        (lhs.w * rhs.w) - (lhs.x * rhs.x) - (lhs.y * rhs.y) - (lhs.z * rhs.z),
+        (lhs.w * rhs.x) + (lhs.x * rhs.w) + (lhs.y * rhs.z) - (lhs.z * rhs.y),
+        (lhs.w * rhs.y) + (lhs.y * rhs.w) + (lhs.z * rhs.x) - (lhs.x * rhs.z),
+        (lhs.w * rhs.z) + (lhs.z * rhs.w) + (lhs.x * rhs.y) - (lhs.y * rhs.x)
+    };
+}
+
+inline vr::HmdVector3d_t quaternionRotateVector(const vr::HmdQuaternion_t& quat, const double(&vector)[3]) {
+    vr::HmdQuaternion_t vectorQuat = { 0.0, vector[0], vector[1] , vector[2] };
+    vr::HmdQuaternion_t conjugate = { quat.w, -quat.x, -quat.y, -quat.z };
+    auto rotatedVectorQuat = quat * vectorQuat * conjugate;
+    return { rotatedVectorQuat.x, rotatedVectorQuat.y, rotatedVectorQuat.z };
 }
 
 ovrVector3f crossProduct(const ovrVector3f v, ovrVector3f p) 

@@ -16,7 +16,12 @@
 #include <mutex>
 #include <thread>
 
-
+namespace vr {
+    struct HmdQuaternion_t
+    {
+        double w, x, y, z;
+    };
+}
 struct config_data {
     uint32_t vr_universe;
     bool be_objects;
@@ -31,6 +36,9 @@ struct config_data {
     bool sqrt_pre_filter;
     bool sqrt_post_filter;
     bool do_rendering;
+    bool do_world_transformation;
+    double world_translation[3];
+    vr::HmdQuaternion_t world_orientation_q;
 };
 
 struct shared_buffer {

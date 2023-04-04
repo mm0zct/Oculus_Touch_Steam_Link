@@ -290,6 +290,14 @@ int main(int argc, char** argsv)
         return -1;
     }
     comm_buffer->logging_offset = 0;
+    comm_buffer->config.do_world_transformation = false;
+    comm_buffer->config.world_translation[0] = 0.0;
+    comm_buffer->config.world_translation[1] = 0.0;
+    comm_buffer->config.world_translation[2] = 0.0;
+    comm_buffer->config.world_orientation_q.w = 1.0;
+    comm_buffer->config.world_orientation_q.x = 0.0;
+    comm_buffer->config.world_orientation_q.y = 0.0;
+    comm_buffer->config.world_orientation_q.z = 0.0;
     if (argc < 11) {
         std::cout << " <11 arguments, using defaults: n 31 Oculus_link oculus_link n 16 n n y n" << std::endl;
         comm_buffer->config.do_rendering = false;
@@ -331,7 +339,7 @@ int main(int argc, char** argsv)
         p_gui_manager->handle_loop();
         });
    
-#if 1
+#if 0
     if (comm_buffer->config.do_rendering) {
         GuardianSystemDemo* instance = new (_aligned_malloc(sizeof(GuardianSystemDemo), 16)) GuardianSystemDemo();
         instance->Start(0, comm_buffer, comm_mutex);

@@ -178,7 +178,10 @@ std::vector<config_window_object> config_windows = {
                     swprintf_s(CompBuffer, len, L"%.1f", latency);
                     if (wcsncmp(Buffer, CompBuffer, len)) {
                         being_changed = true;
+                        DWORD pos;
+                        SendMessage((HWND)lp, EM_GETSEL, (WPARAM)&pos, NULL);
                         SetWindowText((HWND)lp, CompBuffer);
+                        SendMessage((HWND)lp, EM_SETSEL, pos, pos);
                         being_changed = false;
                     }
                     comm_buffer->config.extra_prediction_ms = latency;
@@ -214,7 +217,10 @@ std::vector<config_window_object> config_windows = {
                     swprintf_s(CompBuffer, len, L"%.2f", amplitude_scale);
                     if (wcsncmp(Buffer, CompBuffer, len)) {
                         being_changed = true;
+                        DWORD pos;
+                        SendMessage((HWND)lp, EM_GETSEL, (WPARAM)&pos, NULL);
                         SetWindowText((HWND)lp, CompBuffer);
+                        SendMessage((HWND)lp, EM_SETSEL, pos, pos);
                         being_changed = false;
                     }
                     comm_buffer->config.amplitude_scale = amplitude_scale;
@@ -251,7 +257,10 @@ std::vector<config_window_object> config_windows = {
                     swprintf_s(CompBuffer, len, L"%u", amplitude);
                     if (wcsncmp(Buffer, CompBuffer, len)) {
                         being_changed = true;
+                        DWORD pos;
+                        SendMessage((HWND)lp, EM_GETSEL, (WPARAM)&pos, NULL);
                         SetWindowText((HWND)lp, CompBuffer);
+                        SendMessage((HWND)lp, EM_SETSEL, pos, pos);
                         being_changed = false;
                     }
                     comm_buffer->config.min_amplitude = amplitude;
@@ -289,6 +298,106 @@ std::vector<config_window_object> config_windows = {
         CheckDlgButton(parent, self->id.get_id(), comm_buffer->config.sqrt_post_filter ? BST_CHECKED : BST_UNCHECKED);
         return;
     } }
+, { L"Perform World Translation",L"BUTTON", WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_FLAT | BS_TEXT | BS_CHECKBOX,
+    [](HWND window, WPARAM wp, LPARAM lp, shared_buffer* comm_buffer) {
+        BOOL checked = IsDlgButtonChecked(window, wp);
+        comm_buffer->config.do_world_transformation = !checked;
+        CheckDlgButton(window, wp, checked ? BST_UNCHECKED : BST_CHECKED);
+        return;
+    }, [](config_window_object* self, HWND parent, shared_buffer* comm_buffer) {
+         self->parent = parent;
+        CheckDlgButton(parent, self->id.get_id(), comm_buffer->config.do_world_transformation ? BST_CHECKED : BST_UNCHECKED);
+        return;
+    } }
+ , { L"World Position Offset X Y Z",L"EDIT", WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_FLAT | BS_TEXT | ES_READONLY,
+     default_wm_command, default_init }
+ , { L"0.0000 0.0000 0.0000",L"EDIT", WS_VISIBLE | WS_CHILD | ES_NUMBER,
+            [](HWND window, WPARAM wp, LPARAM lp, shared_buffer* comm_buffer) {
+                switch (HIWORD(wp))
+                {
+                case EN_CHANGE:
+                    {
+                        static bool being_changed = false;
+                        if (!being_changed) {
+                            const size_t len = 64;
+                            WCHAR Buffer[len];
+                            WCHAR CompBuffer[len];
+                            double offset[3];
+                            GetWindowText((HWND)lp, Buffer, len);
+                            swscanf_s(Buffer, L"%lf %lf %lf", &offset[0], &offset[1], &offset[2]);
+                            std::wcout << L"control text is: " << Buffer << std::endl;
+                            std::cout << "parsed world offset " << offset[0] << " " << offset[1] << " " << offset[2] << std::endl;
+                            swprintf_s(CompBuffer, len, L"%.4lf %.4lf %.4lf", offset[0], offset[1], offset[2]);
+                            if (wcsncmp(Buffer, CompBuffer, len)) {
+                                DWORD pos;
+                                SendMessage((HWND)lp, EM_GETSEL, (WPARAM)&pos, NULL);
+                                std::cout << "got caret result = " << pos << std::endl;
+                                being_changed = true;
+                                std::wcout << L"reformatting text to: " << CompBuffer << std::endl;
+                                SetWindowText((HWND)lp, CompBuffer);
+                                SendMessage((HWND)lp, EM_SETSEL, pos, pos);
+                                being_changed = false;
+                            }
+                            comm_buffer->config.world_translation[0] = offset[0];
+                            comm_buffer->config.world_translation[1] = offset[1];
+                            comm_buffer->config.world_translation[2] = offset[2];
+                        }
+                    }
+                }
+                return;
+            },  [](config_window_object* self, HWND parent, shared_buffer* comm_buffer) {
+                self->parent = parent;
+                const size_t len = 32;
+                WCHAR CompBuffer[len];
+                swprintf_s(CompBuffer, len, L"%.2f", comm_buffer->config.amplitude_scale);
+                SetWindowText((HWND)self->wnd, CompBuffer);
+                return;
+            } }
+, { L"World Rotation Offset W X Y Z",L"EDIT", WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_FLAT | BS_TEXT | ES_READONLY,
+        default_wm_command, default_init }
+, { L"1.0000 0.0000 0.0000 0.0000",L"EDIT", WS_VISIBLE | WS_CHILD | ES_NUMBER,
+            [](HWND window, WPARAM wp, LPARAM lp, shared_buffer* comm_buffer) {
+                switch (HIWORD(wp))
+                {
+                case EN_CHANGE:
+                    {
+                        static bool being_changed = false;
+                        if (!being_changed) {
+                            const size_t len = 64;
+                            WCHAR Buffer[len];
+                            WCHAR CompBuffer[len];
+                            double offset[4];
+                            GetWindowText((HWND)lp, Buffer, len);
+                            swscanf_s(Buffer, L"%lf %lf %lf %lf", &offset[0], &offset[1], &offset[2], &offset[3]);
+                            std::wcout << L"control text is: " << Buffer << std::endl;
+                            std::cout << "parsed world rotation offset " << offset[0] << " " << offset[1] << " " << offset[2] << " " << offset[3] << std::endl;
+                            swprintf_s(CompBuffer, len, L"%.4lf %.4lf %.4lf %.4lf", offset[0], offset[1], offset[2], offset[4]);
+                            if (wcsncmp(Buffer, CompBuffer, len)) {
+                                DWORD pos;
+                                SendMessage((HWND)lp, EM_GETSEL, (WPARAM)&pos, NULL);
+                                std::cout << "got caret result = " << pos << std::endl;
+                                being_changed = true;
+                                std::wcout << L"reformatting text to: " << CompBuffer << std::endl;
+                                SetWindowText((HWND)lp, CompBuffer);
+                                SendMessage((HWND)lp, EM_SETSEL, pos, pos);
+                                being_changed = false;
+                            }
+                            comm_buffer->config.world_orientation_q.w = offset[0];
+                            comm_buffer->config.world_orientation_q.x = offset[1];
+                            comm_buffer->config.world_orientation_q.y = offset[2];
+                            comm_buffer->config.world_orientation_q.z = offset[3];
+                        }
+                    }
+                }
+                return;
+            },  [](config_window_object* self, HWND parent, shared_buffer* comm_buffer) {
+                self->parent = parent;
+                const size_t len = 32;
+                WCHAR CompBuffer[len];
+                swprintf_s(CompBuffer, len, L"%.2f", comm_buffer->config.amplitude_scale);
+                SetWindowText((HWND)self->wnd, CompBuffer);
+                return;
+            } }
 };
 
 std::map<HWND, config_window_object*> config_window_map;
