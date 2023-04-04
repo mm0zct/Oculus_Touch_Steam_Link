@@ -339,7 +339,7 @@ int main(int argc, char** argsv)
         p_gui_manager->handle_loop();
         });
    
-#if 0
+#if 1
     if (comm_buffer->config.do_rendering) {
         GuardianSystemDemo* instance = new (_aligned_malloc(sizeof(GuardianSystemDemo), 16)) GuardianSystemDemo();
         instance->Start(0, comm_buffer, comm_mutex);
