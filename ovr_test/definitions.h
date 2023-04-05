@@ -39,6 +39,7 @@ struct config_data {
     bool do_world_transformation;
     double world_translation[3];
     vr::HmdQuaternion_t world_orientation_q;
+    double world_orientation_euler[3];
 };
 
 struct shared_buffer {

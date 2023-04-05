@@ -17,6 +17,15 @@ private:
 
 std::atomic<uint32_t> unique_window_id::allocation_counter = 0;
 
+vr::HmdQuaternion_t euler_to_quat(double yaw, double pitch, double roll) {
+    //https://math.stackexchange.com/questions/2975109/how-to-convert-euler-angles-to-quaternions-and-get-the-same-euler-angles-back-fr
+    vr::HmdQuaternion_t result;
+    result.y = cos(roll / 2) * sin(pitch / 2) * cos(yaw / 2) + sin(roll / 2) * cos(pitch / 2) * sin(yaw / 2);
+    result.z = cos(roll / 2) * cos(pitch / 2) * sin(yaw / 2) - sin(roll / 2) * sin(pitch / 2) * cos(yaw / 2);
+    result.w = cos(roll / 2) * cos(pitch / 2) * cos(yaw / 2) + sin(roll / 2) * sin(pitch / 2) * sin(yaw / 2);
+    result.x = sin(roll / 2) * cos(pitch / 2) * cos(yaw / 2) - cos(roll / 2) * sin(pitch / 2) * sin(yaw / 2);
+    return result;
+}
 
 class config_window_object;
 typedef std::function<void(HWND window, WPARAM wp, LPARAM lp, shared_buffer* comm_buffer)> wm_command_prototype;
@@ -38,6 +47,9 @@ public:
     wm_command_prototype wm_command;
     init_prototype init;
 };
+
+config_window_object* orient_q_wp = nullptr;
+config_window_object* orient_euler_wp = nullptr;
 
 wm_command_prototype default_wm_command = [](HWND window, WPARAM wp, LPARAM lp, shared_buffer* comm_buffer) { return; };
 init_prototype default_init = [](config_window_object* self, HWND parent, shared_buffer* comm_buffer) { self->parent = parent; return; };
@@ -353,7 +365,53 @@ std::vector<config_window_object> config_windows = {
                 SetWindowText((HWND)self->wnd, CompBuffer);
                 return;
             } }
-, { L"World Rotation Offset W X Y Z",L"EDIT", WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_FLAT | BS_TEXT | ES_READONLY,
+, { L"World Rotation Offset Quaternion X Y Z W",L"EDIT", WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_FLAT | BS_TEXT | ES_READONLY,
+        default_wm_command, default_init }
+, { L"1.0000 0.0000 0.0000 0.0000",L"EDIT", WS_VISIBLE | WS_CHILD | ES_NUMBER,
+        [](HWND window, WPARAM wp, LPARAM lp, shared_buffer* comm_buffer) {
+            switch (HIWORD(wp))
+            {
+            case EN_CHANGE:
+                {
+                    static bool being_changed = false;
+                    if (!being_changed) {
+                        const size_t len = 64;
+                        WCHAR Buffer[len];
+                        WCHAR CompBuffer[len];
+                        double offset[4];
+                        GetWindowText((HWND)lp, Buffer, len);
+                        swscanf_s(Buffer, L"%lf %lf %lf %lf", &offset[0], &offset[1], &offset[2], &offset[3]);
+                        std::wcout << L"control text is: " << Buffer << std::endl;
+                        std::cout << "parsed world rotation offset " << offset[0] << " " << offset[1] << " " << offset[2] << " " << offset[3] << std::endl;
+                        swprintf_s(CompBuffer, len, L"%.4lf %.4lf %.4lf %.4lf", offset[0], offset[1], offset[2], offset[4]);
+                        if (wcsncmp(Buffer, CompBuffer, len)) {
+                            DWORD pos;
+                            SendMessage((HWND)lp, EM_GETSEL, (WPARAM)&pos, NULL);
+                            std::cout << "got caret result = " << pos << std::endl;
+                            being_changed = true;
+                            std::wcout << L"reformatting text to: " << CompBuffer << std::endl;
+                            SetWindowText((HWND)lp, CompBuffer);
+                            SendMessage((HWND)lp, EM_SETSEL, pos, pos);
+                            being_changed = false;
+                        }
+                        comm_buffer->config.world_orientation_q.x = offset[0];
+                        comm_buffer->config.world_orientation_q.y = offset[1];
+                        comm_buffer->config.world_orientation_q.z = offset[2];
+                        comm_buffer->config.world_orientation_q.w = offset[3];
+                    }
+                }
+            }
+            return;
+        },  [](config_window_object* self, HWND parent, shared_buffer* comm_buffer) {
+            self->parent = parent;
+            orient_q_wp = self;
+            const size_t len = 64;
+            WCHAR CompBuffer[len];
+            swprintf_s(CompBuffer, len, L"%.4lf %.4lf %.4lf %.4lf", comm_buffer->config.world_orientation_q.x, comm_buffer->config.world_orientation_q.y, comm_buffer->config.world_orientation_q.z, comm_buffer->config.world_orientation_q.w);
+            SetWindowText((HWND)self->wnd, CompBuffer);
+            return;
+        } }
+, { L"World Rotation Offset Euler Yaw Pitch Roll",L"EDIT", WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_FLAT | BS_TEXT | ES_READONLY,
         default_wm_command, default_init }
 , { L"1.0000 0.0000 0.0000 0.0000",L"EDIT", WS_VISIBLE | WS_CHILD | ES_NUMBER,
             [](HWND window, WPARAM wp, LPARAM lp, shared_buffer* comm_buffer) {
@@ -368,10 +426,10 @@ std::vector<config_window_object> config_windows = {
                             WCHAR CompBuffer[len];
                             double offset[4];
                             GetWindowText((HWND)lp, Buffer, len);
-                            swscanf_s(Buffer, L"%lf %lf %lf %lf", &offset[0], &offset[1], &offset[2], &offset[3]);
+                            swscanf_s(Buffer, L"%lf %lf %lf", &offset[0], &offset[1], &offset[2]);
                             std::wcout << L"control text is: " << Buffer << std::endl;
-                            std::cout << "parsed world rotation offset " << offset[0] << " " << offset[1] << " " << offset[2] << " " << offset[3] << std::endl;
-                            swprintf_s(CompBuffer, len, L"%.4lf %.4lf %.4lf %.4lf", offset[0], offset[1], offset[2], offset[4]);
+                            std::cout << "parsed world rotation offset " << offset[0] << " " << offset[1] << " " << offset[2] << std::endl;
+                            swprintf_s(CompBuffer, len, L"%.4lf %.4lf %.4lf", offset[0], offset[1], offset[2], offset[4]);
                             if (wcsncmp(Buffer, CompBuffer, len)) {
                                 DWORD pos;
                                 SendMessage((HWND)lp, EM_GETSEL, (WPARAM)&pos, NULL);
@@ -382,19 +440,22 @@ std::vector<config_window_object> config_windows = {
                                 SendMessage((HWND)lp, EM_SETSEL, pos, pos);
                                 being_changed = false;
                             }
-                            comm_buffer->config.world_orientation_q.w = offset[0];
-                            comm_buffer->config.world_orientation_q.x = offset[1];
-                            comm_buffer->config.world_orientation_q.y = offset[2];
-                            comm_buffer->config.world_orientation_q.z = offset[3];
+                            comm_buffer->config.world_orientation_euler[0] = offset[0];
+                            comm_buffer->config.world_orientation_euler[1] = offset[1];
+                            comm_buffer->config.world_orientation_euler[2] = offset[2];
+
+                            comm_buffer->config.world_orientation_q = euler_to_quat(offset[0], offset[1], offset[2]);
+                            orient_q_wp->init(orient_q_wp, window , comm_buffer);
                         }
                     }
                 }
                 return;
             },  [](config_window_object* self, HWND parent, shared_buffer* comm_buffer) {
                 self->parent = parent;
+                orient_euler_wp = self;
                 const size_t len = 64;
                 WCHAR CompBuffer[len];
-                swprintf_s(CompBuffer, len, L"%.4lf %.4lf %.4lf %.4lf", comm_buffer->config.world_orientation_q.w, comm_buffer->config.world_orientation_q.x, comm_buffer->config.world_orientation_q.y, comm_buffer->config.world_orientation_q.z);
+                swprintf_s(CompBuffer, len, L"%.4lf %.4lf %.4lf", comm_buffer->config.world_orientation_euler[0], comm_buffer->config.world_orientation_euler[1], comm_buffer->config.world_orientation_euler[2]);
                 SetWindowText((HWND)self->wnd, CompBuffer);
                 return;
             } }
