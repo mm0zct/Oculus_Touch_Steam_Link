@@ -338,9 +338,9 @@ std::vector<config_window_object> config_windows = {
                                 SendMessage((HWND)lp, EM_SETSEL, pos, pos);
                                 being_changed = false;
                             }
-                            comm_buffer->config.world_translation[0] = offset[0];
-                            comm_buffer->config.world_translation[1] = offset[1];
-                            comm_buffer->config.world_translation[2] = offset[2];
+                            comm_buffer->config.world_translation[0] = offset[0] * 0.01;
+                            comm_buffer->config.world_translation[1] = offset[1] * 0.01;
+                            comm_buffer->config.world_translation[2] = offset[2] * 0.01;
                         }
                     }
                 }
@@ -349,7 +349,7 @@ std::vector<config_window_object> config_windows = {
                 self->parent = parent;
                 const size_t len = 32;
                 WCHAR CompBuffer[len];
-                swprintf_s(CompBuffer, len, L"%.2f", comm_buffer->config.amplitude_scale);
+                swprintf_s(CompBuffer, len, L"%.4lf %.4lf %.4lf", 100.0*comm_buffer->config.world_translation[0], 100.0 * comm_buffer->config.world_translation[1], 100.0 * comm_buffer->config.world_translation[2]);
                 SetWindowText((HWND)self->wnd, CompBuffer);
                 return;
             } }
@@ -392,9 +392,9 @@ std::vector<config_window_object> config_windows = {
                 return;
             },  [](config_window_object* self, HWND parent, shared_buffer* comm_buffer) {
                 self->parent = parent;
-                const size_t len = 32;
+                const size_t len = 64;
                 WCHAR CompBuffer[len];
-                swprintf_s(CompBuffer, len, L"%.2f", comm_buffer->config.amplitude_scale);
+                swprintf_s(CompBuffer, len, L"%.4lf %.4lf %.4lf %.4lf", comm_buffer->config.world_orientation_q.w, comm_buffer->config.world_orientation_q.x, comm_buffer->config.world_orientation_q.y, comm_buffer->config.world_orientation_q.z);
                 SetWindowText((HWND)self->wnd, CompBuffer);
                 return;
             } }

@@ -299,12 +299,12 @@ int main(int argc, char** argsv)
     comm_buffer->config.world_orientation_q.y = 0.0;
     comm_buffer->config.world_orientation_q.z = 0.0;
     if (argc < 11) {
-        std::cout << " <11 arguments, using defaults: n 31 Oculus_link oculus_link n 16 n n y n" << std::endl;
+        std::cout << " <11 arguments, using defaults: n 31 Oculus_link oculus_link n 5 n n y n" << std::endl;
         comm_buffer->config.do_rendering = false;
         comm_buffer->config.vr_universe = 31;
         strncpy_s(comm_buffer->config.manufacturer_name, "Oculus_link", 127);
         strncpy_s(comm_buffer->config.tracking_space_name, "oculus_link", 127);
-        comm_buffer->config.extra_prediction_ms = 16.0f;
+        comm_buffer->config.extra_prediction_ms = 5.0f;
         comm_buffer->config.be_objects = false;
         comm_buffer->config.external_tracking = false;
         comm_buffer->config.track_hmd = false;
