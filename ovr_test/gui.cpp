@@ -20,10 +20,14 @@ std::atomic<uint32_t> unique_window_id::allocation_counter = 0;
 vr::HmdQuaternion_t euler_to_quat(double yaw, double pitch, double roll) {
     //https://math.stackexchange.com/questions/2975109/how-to-convert-euler-angles-to-quaternions-and-get-the-same-euler-angles-back-fr
     vr::HmdQuaternion_t result;
+    yaw *= 3.14159 / 180.0;
+    pitch *= 3.14159 / 180.0;
+    roll *= 3.14159 / 180.0;
+    result.x = sin(roll / 2) * cos(pitch / 2) * cos(yaw / 2) - cos(roll / 2) * sin(pitch / 2) * sin(yaw / 2);
     result.y = cos(roll / 2) * sin(pitch / 2) * cos(yaw / 2) + sin(roll / 2) * cos(pitch / 2) * sin(yaw / 2);
     result.z = cos(roll / 2) * cos(pitch / 2) * sin(yaw / 2) - sin(roll / 2) * sin(pitch / 2) * cos(yaw / 2);
     result.w = cos(roll / 2) * cos(pitch / 2) * cos(yaw / 2) + sin(roll / 2) * sin(pitch / 2) * sin(yaw / 2);
-    result.x = sin(roll / 2) * cos(pitch / 2) * cos(yaw / 2) - cos(roll / 2) * sin(pitch / 2) * sin(yaw / 2);
+        
     return result;
 }
 
@@ -383,7 +387,7 @@ std::vector<config_window_object> config_windows = {
                         swscanf_s(Buffer, L"%lf %lf %lf %lf", &offset[0], &offset[1], &offset[2], &offset[3]);
                         std::wcout << L"control text is: " << Buffer << std::endl;
                         std::cout << "parsed world rotation offset " << offset[0] << " " << offset[1] << " " << offset[2] << " " << offset[3] << std::endl;
-                        swprintf_s(CompBuffer, len, L"%.4lf %.4lf %.4lf %.4lf", offset[0], offset[1], offset[2], offset[4]);
+                        swprintf_s(CompBuffer, len, L"%.4lf %.4lf %.4lf %.4lf", offset[0], offset[1], offset[2], offset[3]);
                         if (wcsncmp(Buffer, CompBuffer, len)) {
                             DWORD pos;
                             SendMessage((HWND)lp, EM_GETSEL, (WPARAM)&pos, NULL);
