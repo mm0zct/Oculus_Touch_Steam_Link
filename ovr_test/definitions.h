@@ -58,7 +58,7 @@ struct shared_buffer {
 
 extern shared_buffer* comm_buffer;
 
-
+void reset_config_settings(config_data& config);
 
 
 class GUI_Manager {
@@ -68,6 +68,7 @@ public:
     GUI_Manager(shared_buffer* comm_buffer);
     void handle_loop();
     LRESULT CALLBACK GUIWndProc(HWND window, UINT msg, WPARAM wp, LPARAM lp);
+    void reset_settings_window();
     private:
 
     

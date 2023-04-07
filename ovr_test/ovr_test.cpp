@@ -227,7 +227,29 @@ shared_buffer* comm_buffer;
 
 GUI_Manager* p_gui_manager = nullptr;
 
-
+void reset_config_settings(config_data& config) {
+    config.do_world_transformation = false;
+    config.world_translation[0] = 0.0;
+    config.world_translation[1] = 0.0;
+    config.world_translation[2] = 0.0;
+    config.world_orientation_q.w = 1.0;
+    config.world_orientation_q.x = 0.0;
+    config.world_orientation_q.y = 0.0;
+    config.world_orientation_q.z = 0.0;
+    config.world_orientation_euler[0] = 0.0;
+    config.world_orientation_euler[1] = 0.0;
+    config.world_orientation_euler[2] = 0.0;
+    config.do_rendering = false;
+    config.vr_universe = 31;
+    strncpy_s(comm_buffer->config.manufacturer_name, "Oculus_link", 127);
+    strncpy_s(comm_buffer->config.tracking_space_name, "oculus_link", 127);
+    config.extra_prediction_ms = 5.0f;
+    config.be_objects = false;
+    config.external_tracking = false;
+    config.track_hmd = false;
+    config.min_amplitude = 64;
+    config.amplitude_scale = 10.0;
+}
 
 int main(int argc, char** argsv)
 {
@@ -289,29 +311,10 @@ int main(int argc, char** argsv)
 
         return -1;
     }
-    comm_buffer->logging_offset = 0;
-    comm_buffer->config.do_world_transformation = false;
-    comm_buffer->config.world_translation[0] = 0.0;
-    comm_buffer->config.world_translation[1] = 0.0;
-    comm_buffer->config.world_translation[2] = 0.0;
-    comm_buffer->config.world_orientation_q.w = 1.0;
-    comm_buffer->config.world_orientation_q.x = 0.0;
-    comm_buffer->config.world_orientation_q.y = 0.0;
-    comm_buffer->config.world_orientation_q.z = 0.0;
-    if (argc < 11) {
+    reset_config_settings(comm_buffer->config);
+    if (argc != 11) {
         std::cout << " <11 arguments, using defaults: n 31 Oculus_link oculus_link n 5 n n y n" << std::endl;
-        comm_buffer->config.do_rendering = false;
-        comm_buffer->config.vr_universe = 31;
-        strncpy_s(comm_buffer->config.manufacturer_name, "Oculus_link", 127);
-        strncpy_s(comm_buffer->config.tracking_space_name, "oculus_link", 127);
-        comm_buffer->config.extra_prediction_ms = 5.0f;
-        comm_buffer->config.be_objects = false;
-        comm_buffer->config.external_tracking = false;
-        comm_buffer->config.track_hmd = false;
-        comm_buffer->config.min_amplitude = 64;
-        comm_buffer->config.amplitude_scale = 10.0;
-    }
-    else {
+    } else {
         comm_buffer->config.do_rendering = (std::string(argsv[1]) == "y");
         comm_buffer->config.vr_universe = atoi(argsv[2]);
         strncpy_s(comm_buffer->config.manufacturer_name, argsv[3], 127);
