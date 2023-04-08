@@ -57,9 +57,10 @@ struct shared_buffer {
 };
 
 extern shared_buffer* comm_buffer;
+extern ovrSession mSession;
 
 void reset_config_settings(config_data& config);
-
+void save_config_to_file(config_data& config);
 
 class GUI_Manager {
 

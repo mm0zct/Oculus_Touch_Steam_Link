@@ -3,11 +3,12 @@
 
 
 #include "definitions.h"
-
+#include <fstream>
 
 //#define MAX_HAPTICS
 
 
+ovrSession mSession;
 uint32_t future_vib_buffer_index[2] = { 0 };
 double vib_buf_time[2] = { 0 };
 //uint8_t future_vib_buffer[1024] = { 0 };
@@ -149,9 +150,8 @@ void main_loop(ovrSession mSession, HANDLE comm_mutex, shared_buffer* comm_buffe
 }
 
 
-
 void no_graphics_start(shared_buffer* comm_buffer, HANDLE comm_mutex) {
-    ovrSession mSession = nullptr;
+    mSession = nullptr;
     //  ovrSession hmd2 = nullptr;
     ovrGraphicsLuid luid{};
     //  ovrGraphicsLuid luid2{};
@@ -228,6 +228,19 @@ shared_buffer* comm_buffer;
 GUI_Manager* p_gui_manager = nullptr;
 
 void reset_config_settings(config_data& config) {
+    config.vr_universe = 31;
+    config.be_objects = false;
+    config.extra_prediction_ms = 5.0f;
+    strncpy_s(comm_buffer->config.manufacturer_name, "Oculus_link", 127);
+    strncpy_s(comm_buffer->config.tracking_space_name, "oculus_link", 127);
+    comm_buffer->config.num_objects = (ovr_GetConnectedControllerTypes(mSession) >> 8) & 0xf;
+    config.external_tracking = false;
+    config.track_hmd = false;
+    config.min_amplitude = 64;
+    config.amplitude_scale = 10.0;
+    config.sqrt_pre_filter = false;
+    config.sqrt_post_filter = false;
+    config.do_rendering = false;
     config.do_world_transformation = false;
     config.world_translation[0] = 0.0;
     config.world_translation[1] = 0.0;
@@ -239,16 +252,101 @@ void reset_config_settings(config_data& config) {
     config.world_orientation_euler[0] = 0.0;
     config.world_orientation_euler[1] = 0.0;
     config.world_orientation_euler[2] = 0.0;
-    config.do_rendering = false;
-    config.vr_universe = 31;
-    strncpy_s(comm_buffer->config.manufacturer_name, "Oculus_link", 127);
-    strncpy_s(comm_buffer->config.tracking_space_name, "oculus_link", 127);
-    config.extra_prediction_ms = 5.0f;
-    config.be_objects = false;
-    config.external_tracking = false;
-    config.track_hmd = false;
-    config.min_amplitude = 64;
-    config.amplitude_scale = 10.0;
+}
+
+void save_config_to_file(config_data& config) {
+    char exe_filename[512];
+    auto str_len = GetModuleFileNameA( NULL, (LPSTR) exe_filename, 512);
+    std::cout << "exe_filename = " << exe_filename << std::endl;
+    while (str_len && (exe_filename[str_len] != '\\')) str_len--;
+    exe_filename[str_len] = '\0';
+    std::cout << "exe_filepath = " << exe_filename << std::endl;
+    char config_filename[] = "\\config.dat";
+    for (size_t i = 0; i < sizeof(config_filename); i++) {
+        exe_filename[str_len] = config_filename[i];
+        str_len++;
+    }
+    exe_filename[str_len] = '\0';
+    std::cout << "config filename = " << exe_filename << std::endl;
+
+    std::ofstream ofs;
+    ofs.open(exe_filename);
+
+    ofs << config.vr_universe << std::endl;
+    ofs << config.be_objects << std::endl;
+    ofs << config.extra_prediction_ms << std::endl;
+    ofs << config.tracking_space_name << std::endl;
+    ofs << config.manufacturer_name << std::endl;
+    ofs << config.num_objects << std::endl;
+    ofs << config.external_tracking << std::endl;
+    ofs << config.track_hmd << std::endl;
+    ofs << (unsigned)config.min_amplitude << std::endl;
+    ofs << config.amplitude_scale << std::endl;
+    ofs << config.sqrt_pre_filter << std::endl;
+    ofs << config.sqrt_post_filter << std::endl;
+    ofs << config.do_rendering << std::endl;
+    ofs << config.do_world_transformation << std::endl;
+    ofs << config.world_translation[0] << std::endl;
+    ofs << config.world_translation[1] << std::endl;
+    ofs << config.world_translation[2] << std::endl;
+    ofs << config.world_orientation_q.w << std::endl;
+    ofs << config.world_orientation_q.x << std::endl;
+    ofs << config.world_orientation_q.y << std::endl;
+    ofs << config.world_orientation_q.z << std::endl;
+    ofs << config.world_orientation_euler[0] << std::endl;
+    ofs << config.world_orientation_euler[1] << std::endl;
+    ofs << config.world_orientation_euler[2] << std::endl;
+    ofs.close();
+}
+
+
+void load_config_from_file(config_data& config) {
+    char exe_filename[512];
+    auto str_len = GetModuleFileNameA(NULL, (LPSTR)exe_filename, 512);
+    std::cout << "exe_filename = " << exe_filename << std::endl;
+    while (str_len && (exe_filename[str_len] != '\\')) str_len--;
+    exe_filename[str_len] = '\0';
+    std::cout << "exe_filepath = " << exe_filename << std::endl;
+    char config_filename[] = "\\config.dat";
+    for (size_t i = 0; i < sizeof(config_filename); i++) {
+        exe_filename[str_len] = config_filename[i];
+        str_len++;
+    }
+    exe_filename[str_len] = '\0';
+    std::cout << "config filename = " << exe_filename << std::endl;
+
+    std::ifstream ifs;
+    ifs.open(exe_filename);
+    if (ifs.is_open()) {
+        ifs >> config.vr_universe;
+        ifs >> config.be_objects;
+        ifs >> config.extra_prediction_ms;
+        ifs >> config.tracking_space_name;
+        ifs >> config.manufacturer_name;
+        ifs >> config.num_objects;
+        ifs >> config.external_tracking;
+        ifs >> config.track_hmd;
+        unsigned min_amp;
+        ifs >> min_amp;
+        config.min_amplitude = min_amp;
+        
+        ifs >> config.amplitude_scale;
+        ifs >> config.sqrt_pre_filter;
+        ifs >> config.sqrt_post_filter;
+        ifs >> config.do_rendering;
+        ifs >> config.do_world_transformation;
+        ifs >> config.world_translation[0];
+        ifs >> config.world_translation[1];
+        ifs >> config.world_translation[2];
+        ifs >> config.world_orientation_q.w;
+        ifs >> config.world_orientation_q.x;
+        ifs >> config.world_orientation_q.y;
+        ifs >> config.world_orientation_q.z;
+        ifs >> config.world_orientation_euler[0];
+        ifs >> config.world_orientation_euler[1];
+        ifs >> config.world_orientation_euler[2];
+        ifs.close();
+    }
 }
 
 int main(int argc, char** argsv)
@@ -314,6 +412,7 @@ int main(int argc, char** argsv)
     reset_config_settings(comm_buffer->config);
     if (argc != 11) {
         std::cout << " <11 arguments, using defaults: n 31 Oculus_link oculus_link n 5 n n y n" << std::endl;
+        load_config_from_file(comm_buffer->config);
     } else {
         comm_buffer->config.do_rendering = (std::string(argsv[1]) == "y");
         comm_buffer->config.vr_universe = atoi(argsv[2]);

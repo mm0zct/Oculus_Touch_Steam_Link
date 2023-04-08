@@ -389,59 +389,7 @@ std::vector<config_window_object> config_windows = {
                 SetWindowText((HWND)self->wnd, CompBuffer);
                 return;
             } }
-, { L"World Rotation Offset Quaternion X Y Z W",L"EDIT", WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_FLAT | BS_TEXT | ES_READONLY,
-        default_wm_command, default_init }
-, { L"1.0000 0.0000 0.0000 0.0000",L"EDIT", WS_VISIBLE | WS_CHILD ,
-        [](HWND window, WPARAM wp, LPARAM lp, shared_buffer* comm_buffer) {
-            switch (HIWORD(wp))
-            {
-            case EN_CHANGE:
-                {
-                    if (!internal_angle_update) {
-                        internal_angle_update = true;
-                        const size_t len = 64;
-                        WCHAR Buffer[len];
-                        WCHAR CompBuffer[len];
-                        double offset[4];
-                        GetWindowText((HWND)lp, Buffer, len);
-                        swscanf_s(Buffer, L"%lf %lf %lf %lf", &offset[0], &offset[1], &offset[2], &offset[3]);
-                        std::wcout << L"control text is: " << Buffer << std::endl;
-                        std::cout << "parsed world rotation offset " << offset[0] << " " << offset[1] << " " << offset[2] << " " << offset[3] << std::endl;
-                        swprintf_s(CompBuffer, len, L"%.4lf %.4lf %.4lf %.4lf", offset[0], offset[1], offset[2], offset[3]);
-                        if (wcsncmp(Buffer, CompBuffer, len)) {
-                            DWORD pos;
-                            SendMessage((HWND)lp, EM_GETSEL, (WPARAM)&pos, NULL);
-                            std::cout << "got caret result = " << pos << std::endl;
-                            std::wcout << L"reformatting text to: " << CompBuffer << std::endl;
-                            SetWindowText((HWND)lp, CompBuffer);
-                            SendMessage((HWND)lp, EM_SETSEL, pos, pos);
 
-                        }
-                        comm_buffer->config.world_orientation_q.x = offset[0];
-                        comm_buffer->config.world_orientation_q.y = offset[1];
-                        comm_buffer->config.world_orientation_q.z = offset[2];
-                        comm_buffer->config.world_orientation_q.w = offset[3];
-                        if (orient_euler_wp) {
-                            std::tie(comm_buffer->config.world_orientation_euler[0],
-                                comm_buffer->config.world_orientation_euler[1],
-                                comm_buffer->config.world_orientation_euler[2])
-                                = quaternion_to_euler(comm_buffer->config.world_orientation_q);
-                            orient_euler_wp->init(orient_euler_wp, window, comm_buffer);
-                         }
-                        internal_angle_update = false;
-                    }
-                }
-            }
-            return;
-        },  [](config_window_object* self, HWND parent, shared_buffer* comm_buffer) {
-            self->parent = parent;
-            orient_q_wp = self;
-            const size_t len = 64;
-            WCHAR CompBuffer[len];
-            swprintf_s(CompBuffer, len, L"%.4lf %.4lf %.4lf %.4lf", comm_buffer->config.world_orientation_q.x, comm_buffer->config.world_orientation_q.y, comm_buffer->config.world_orientation_q.z, comm_buffer->config.world_orientation_q.w);
-            SetWindowText((HWND)self->wnd, CompBuffer);
-            return;
-        } }
 , { L"World Rotation Offset Euler Yaw Pitch Roll",L"EDIT", WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_FLAT | BS_TEXT | ES_READONLY,
         default_wm_command, default_init }
 , { L"1.0000 0.0000 0.0000 0.0000",L"EDIT", WS_VISIBLE | WS_CHILD | ES_NUMBER,
@@ -492,7 +440,61 @@ std::vector<config_window_object> config_windows = {
                 SetWindowText((HWND)self->wnd, CompBuffer);
                 return;
             } }
-            , { L"Reset",L"BUTTON", WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_FLAT | BS_TEXT ,
+, { L"World Rotation Offset Quaternion X Y Z W",L"EDIT", WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_FLAT | BS_TEXT | ES_READONLY,
+        default_wm_command, default_init }
+, { L"0.0000 0.0000 0.0000 1.0000",L"EDIT", WS_VISIBLE | WS_CHILD | ES_READONLY,
+        [](HWND window, WPARAM wp, LPARAM lp, shared_buffer* comm_buffer) {
+            switch (HIWORD(wp))
+            {
+            case EN_CHANGE:
+                if (false) { // we've made this read only, we don't want to be updating the euler representation again when this is re-loaded
+                
+                    if (!internal_angle_update) {
+                        internal_angle_update = true;
+                        const size_t len = 64;
+                        WCHAR Buffer[len];
+                        WCHAR CompBuffer[len];
+                        double offset[4];
+                        GetWindowText((HWND)lp, Buffer, len);
+                        swscanf_s(Buffer, L"%lf %lf %lf %lf", &offset[0], &offset[1], &offset[2], &offset[3]);
+                        std::wcout << L"control text is: " << Buffer << std::endl;
+                        std::cout << "parsed world rotation offset " << offset[0] << " " << offset[1] << " " << offset[2] << " " << offset[3] << std::endl;
+                        swprintf_s(CompBuffer, len, L"%.4lf %.4lf %.4lf %.4lf", offset[0], offset[1], offset[2], offset[3]);
+                        if (wcsncmp(Buffer, CompBuffer, len)) {
+                            DWORD pos;
+                            SendMessage((HWND)lp, EM_GETSEL, (WPARAM)&pos, NULL);
+                            std::cout << "got caret result = " << pos << std::endl;
+                            std::wcout << L"reformatting text to: " << CompBuffer << std::endl;
+                            SetWindowText((HWND)lp, CompBuffer);
+                            SendMessage((HWND)lp, EM_SETSEL, pos, pos);
+
+                        }
+                        comm_buffer->config.world_orientation_q.x = offset[0];
+                        comm_buffer->config.world_orientation_q.y = offset[1];
+                        comm_buffer->config.world_orientation_q.z = offset[2];
+                        comm_buffer->config.world_orientation_q.w = offset[3];
+                        if (orient_euler_wp) {
+                            std::tie(comm_buffer->config.world_orientation_euler[0],
+                                comm_buffer->config.world_orientation_euler[1],
+                                comm_buffer->config.world_orientation_euler[2])
+                                = quaternion_to_euler(comm_buffer->config.world_orientation_q);
+                            orient_euler_wp->init(orient_euler_wp, window, comm_buffer);
+                            }
+                        internal_angle_update = false;
+                    }
+                }
+            }
+            return;
+        },  [](config_window_object* self, HWND parent, shared_buffer* comm_buffer) {
+            self->parent = parent;
+            orient_q_wp = self;
+            const size_t len = 64;
+            WCHAR CompBuffer[len];
+            swprintf_s(CompBuffer, len, L"%.4lf %.4lf %.4lf %.4lf", comm_buffer->config.world_orientation_q.x, comm_buffer->config.world_orientation_q.y, comm_buffer->config.world_orientation_q.z, comm_buffer->config.world_orientation_q.w);
+            SetWindowText((HWND)self->wnd, CompBuffer);
+            return;
+        } }
+, { L"Reset",L"BUTTON", WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_FLAT | BS_TEXT ,
     [](HWND window, WPARAM wp, LPARAM lp, shared_buffer* comm_buffer) {
         reset_config_settings(comm_buffer->config);
         GUI_Manager::self->reset_settings_window();
@@ -593,6 +595,7 @@ LRESULT CALLBACK GUI_Manager::GUIWndProc(HWND window, UINT msg, WPARAM wp, LPARA
  //       std::cout << "WM_COMMAND window 0x" << std::hex << window << " wp 0x" << wp << " lp 0x" << lp << std::dec << std::endl;
         if (config_window_map.find((HWND)lp) != config_window_map.end()) {
             config_window_map[(HWND)lp]->wm_command(window, wp, lp, comm_buffer);
+            save_config_to_file(comm_buffer->config);
         }
 
 #if 0
