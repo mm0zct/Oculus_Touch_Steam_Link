@@ -22,6 +22,14 @@ namespace vr {
         double w, x, y, z;
     };
 }
+
+enum e_connection_type {
+    net_local = 0,
+    net_tx,
+    net_rx,
+    net_max_connection_types
+};
+
 struct config_data {
     uint32_t vr_universe;
     bool be_objects;
@@ -40,6 +48,8 @@ struct config_data {
     double world_translation[3];
     vr::HmdQuaternion_t world_orientation_q;
     double world_orientation_euler[3];
+    e_connection_type net_type;
+    uint8_t ipv4[4];
 };
 
 struct shared_buffer {
@@ -54,6 +64,17 @@ struct shared_buffer {
     bool vib_valid[2];
     uint64_t logging_offset;
     char logging_buffer[1024];
+};
+
+enum e_network_packet_type {
+    config_update,
+    tracking_update,
+    haptic_event
+};
+
+struct network_packet_header {
+    e_network_packet_type tag;
+    uint32_t length;
 };
 
 extern shared_buffer* comm_buffer;

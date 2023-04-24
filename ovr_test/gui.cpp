@@ -7,6 +7,9 @@
 #include <tuple>
 #define _USE_MATH_DEFINES
 #include <math.h>
+
+#include "commctrl.h"
+
 class unique_window_id {
 public:
     unique_window_id() {
@@ -58,15 +61,18 @@ class config_window_object {
 
 public:
     unique_window_id id;
+    uint32_t height = 20;
+    uint32_t width = 300;
     HWND wnd = 0;
     HWND parent = 0;
     DWORD style;
     std::wstring name;
     std::wstring window_type;
+    DWORD window_style_ex = 0;
     config_window_object(LPCWSTR name, LPCWSTR window_type, DWORD style,
         wm_command_prototype wm_command,
-        init_prototype init
-    ) : name(name), window_type(window_type), style(style), wm_command(wm_command), init(init) {}
+        init_prototype init, uint32_t height = 20
+    ) : name(name), window_type(window_type), style(style), wm_command(wm_command), init(init), height(height) {}
     wm_command_prototype wm_command;
     init_prototype init;
 };
@@ -75,17 +81,59 @@ config_window_object* orient_q_wp = nullptr;
 config_window_object* orient_euler_wp = nullptr;
 bool internal_angle_update = false;
 
+
+
+bool terminating_net_thread = false;
+SOCKET net_socket;
+std::thread* net_thread = nullptr;
+
+void stop_and_join_net_thread() {
+    if (net_thread) {
+        terminating_net_thread = true;
+        closesocket(net_socket);
+        net_thread->join();
+        delete net_thread;
+        net_thread = nullptr;
+        terminating_net_thread = false;
+    }
+}
+
+void net_transmit_thread(int id) {
+    while (!terminating_net_thread) {
+        std::cout << "TX net_thread running" << std::endl;
+        Sleep(1000);
+    }
+    std::cout << "TX net_thread terminating" << std::endl;
+}
+
+void net_receive_thread(int id) {
+    while (!terminating_net_thread) {
+        std::cout << "RX net_thread running" << std::endl;
+        Sleep(1000);
+    }
+    std::cout << "RX net_thread terminating" << std::endl;
+}
+
+
 wm_command_prototype default_wm_command = [](HWND window, WPARAM wp, LPARAM lp, shared_buffer* comm_buffer) { return; };
 init_prototype default_init = [](config_window_object* self, HWND parent, shared_buffer* comm_buffer) { self->parent = parent; return; };
 
 std::vector<config_window_object> config_windows = { 
-
-   {L"Render In Headset",L"BUTTON", WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_FLAT | BS_TEXT | BS_CHECKBOX, 
+    { L"Reset",L"BUTTON", WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_FLAT | BS_TEXT ,
+[](HWND window, WPARAM wp, LPARAM lp, shared_buffer* comm_buffer) {
+    stop_and_join_net_thread();
+    reset_config_settings(comm_buffer->config);
+    GUI_Manager::self->reset_settings_window();
+    return;
+}, default_init }
+#if 0
+,  {L"Render In Headset",L"BUTTON", WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_FLAT | BS_TEXT | BS_CHECKBOX, 
    default_wm_command,  [](config_window_object* self, HWND parent, shared_buffer* comm_buffer) {
         self->parent = parent;
         CheckDlgButton(parent, self->id.get_id(), comm_buffer->config.do_rendering ? BST_CHECKED : BST_UNCHECKED);
         return;
     } }
+#endif
 ,  {L"Enable External Tracking",L"BUTTON", WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_FLAT | BS_TEXT | BS_CHECKBOX,
     [](HWND window, WPARAM wp, LPARAM lp, shared_buffer* comm_buffer) {
         BOOL checked = IsDlgButtonChecked(window, wp);
@@ -390,7 +438,7 @@ std::vector<config_window_object> config_windows = {
                 return;
             } }
 
-, { L"World Rotation Offset Euler Yaw Pitch Roll",L"EDIT", WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_FLAT | BS_TEXT | ES_READONLY,
+, { L"World Rotation Offset Yaw Pitch Roll",L"EDIT", WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_FLAT | BS_TEXT | ES_READONLY,
         default_wm_command, default_init }
 , { L"1.0000 0.0000 0.0000 0.0000",L"EDIT", WS_VISIBLE | WS_CHILD | ES_NUMBER,
             [](HWND window, WPARAM wp, LPARAM lp, shared_buffer* comm_buffer) {
@@ -440,6 +488,8 @@ std::vector<config_window_object> config_windows = {
                 SetWindowText((HWND)self->wnd, CompBuffer);
                 return;
             } }
+
+#if 0
 , { L"World Rotation Offset Quaternion X Y Z W",L"EDIT", WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_FLAT | BS_TEXT | ES_READONLY,
         default_wm_command, default_init }
 , { L"0.0000 0.0000 0.0000 1.0000",L"EDIT", WS_VISIBLE | WS_CHILD | ES_READONLY,
@@ -494,16 +544,94 @@ std::vector<config_window_object> config_windows = {
             SetWindowText((HWND)self->wnd, CompBuffer);
             return;
         } }
-, { L"Reset",L"BUTTON", WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_FLAT | BS_TEXT ,
+#endif
+
+, { L"Remote IP (net mode)",L"EDIT", WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_FLAT | BS_TEXT | ES_READONLY,
+            default_wm_command, default_init }
+
+    // https://www.functionx.com/cppbuilder/controls/ipaddress.htm
+    // https://learn.microsoft.com/en-us/windows/win32/api/commctrl/
+    // https://learn.microsoft.com/en-us/windows/win32/api/commctrl/nf-commctrl-initcommoncontrolsex
+
+, { L"", WC_IPADDRESS, WS_VISIBLE | WS_CHILD | WS_TABSTOP ,
+            [](HWND window, WPARAM wp, LPARAM lp, shared_buffer* comm_buffer) {
+                switch (HIWORD(wp))
+                {
+                case EN_CHANGE:
+                    {
+                    DWORD CurAddress = 0;
+
+                        SendMessage((HWND)lp,
+                            (UINT)IPM_GETADDRESS,
+                            0,
+                            (LPARAM)(LPDWORD)&CurAddress);
+
+                        comm_buffer->config.ipv4[0] = FIRST_IPADDRESS(CurAddress);
+                        comm_buffer->config.ipv4[1] = SECOND_IPADDRESS(CurAddress);
+                        comm_buffer->config.ipv4[2] = THIRD_IPADDRESS(CurAddress);
+                        comm_buffer->config.ipv4[3] = FOURTH_IPADDRESS(CurAddress);
+                        
+                    }
+                }
+                return;
+            },  [](config_window_object* self, HWND parent, shared_buffer* comm_buffer) {
+                self->parent = parent;
+                SendMessage(self->wnd, (UINT)IPM_SETADDRESS, 0, MAKEIPADDRESS(comm_buffer->config.ipv4[0], comm_buffer->config.ipv4[1], comm_buffer->config.ipv4[2], comm_buffer->config.ipv4[3]));
+                return;
+            } }
+
+
+            // https://learn.microsoft.com/en-us/windows/win32/controls/create-a-simple-combo-box
+            // https://devblogs.microsoft.com/oldnewthing/20060310-17/?p=31973
+, { L"NetworkMode",L"COMBOBOX", CBS_DROPDOWN | CBS_HASSTRINGS | WS_CHILD | WS_OVERLAPPED | WS_VISIBLE,
     [](HWND window, WPARAM wp, LPARAM lp, shared_buffer* comm_buffer) {
-        reset_config_settings(comm_buffer->config);
-        GUI_Manager::self->reset_settings_window();
+         if (HIWORD(wp) == CBN_SELCHANGE)
+             // If the user makes a selection from the list:
+             //   Send CB_GETCURSEL message to get the index of the selected list item.
+             //   Send CB_GETLBTEXT message to get the item.
+             //   Display the item in a messagebox.
+             {
+                 unsigned ItemIndex = SendMessage((HWND)lp, (UINT)CB_GETCURSEL,
+                     (WPARAM)0, (LPARAM)0);
+                     /*TCHAR  ListItem[256];
+                     (TCHAR)SendMessage((HWND)lParam, (UINT)CB_GETLBTEXT,
+                     (WPARAM)ItemIndex, (LPARAM)ListItem);*/
+                 comm_buffer->config.net_type = (e_connection_type)ItemIndex;
+             }
+        return;
+    }, [](config_window_object* self, HWND parent, shared_buffer* comm_buffer) {
+         self->parent = parent;
+         SendMessage(self->wnd, (UINT)CB_ADDSTRING, (WPARAM)0, (LPARAM)L"Local");
+         SendMessage(self->wnd, (UINT)CB_ADDSTRING, (WPARAM)0, (LPARAM)L"NET TX");
+         SendMessage(self->wnd, (UINT)CB_ADDSTRING, (WPARAM)0, (LPARAM)L"NET RX");
+         SendMessage(self->wnd, CB_SETCURSEL, (WPARAM)comm_buffer->config.net_type, (LPARAM)0);
+
+
+        return;
+    }, 80 }
+
+, { L"Net Connect!",L"BUTTON", WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_FLAT | BS_TEXT ,
+    [](HWND window, WPARAM wp, LPARAM lp, shared_buffer* comm_buffer) {
+        std::cout << "Net Connect!" << std::endl;
+        stop_and_join_net_thread();
+        switch (comm_buffer->config.net_type) {
+        case net_local:
+            break;
+        case net_tx:
+            net_thread = new std::thread(net_transmit_thread, 0);
+            break;
+        case net_rx:
+            net_thread = new std::thread(net_receive_thread, 0);
+            break;
+        }
         return;
     }, default_init }
 };
 
-std::map<HWND, config_window_object*> config_window_map;
 
+
+std::map<HWND, config_window_object*> config_window_map;
+bool init_complete = false;
 
 extern shared_buffer* comm_buffer;
 
@@ -521,6 +649,15 @@ GUI_Manager::GUI_Manager(shared_buffer* comm_buffer)
     :comm_buffer(comm_buffer) {
     self = this;
 
+    INITCOMMONCONTROLSEX icex;
+
+    // Ensure that the common control DLL is loaded. 
+    icex.dwSize = sizeof(INITCOMMONCONTROLSEX);
+    icex.dwICC = ICC_INTERNET_CLASSES;
+    bool ok = InitCommonControlsEx(&icex);
+    if (ok)std::cout << "Loaded common controls" << std::endl;
+    else std::cout << "Failed to load common controls" << std::endl;
+
     window = 0;
     WNDCLASSEX wndclass = { sizeof(WNDCLASSEX), CS_DBLCLKS, WndProc,
     0, 0, GetModuleHandle(0), LoadIcon(0,IDI_APPLICATION),
@@ -530,7 +667,7 @@ GUI_Manager::GUI_Manager(shared_buffer* comm_buffer)
     {
         window = CreateWindowEx(0, L"MyWindowsApp", L"title",
             WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT,
-            800, 600, 0, 0, GetModuleHandle(0), 0);
+            600, 640, 0, 0, GetModuleHandle(0), 0);
 
     }
 
@@ -556,6 +693,7 @@ void GUI_Manager::reset_settings_window() {
 
 LRESULT CALLBACK GUI_Manager::GUIWndProc(HWND window, UINT msg, WPARAM wp, LPARAM lp)
 {
+
     switch (msg)
     {
     case WM_DESTROY:
@@ -572,22 +710,17 @@ LRESULT CALLBACK GUI_Manager::GUIWndProc(HWND window, UINT msg, WPARAM wp, LPARA
 //    WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_FLAT | BS_TEXT | BS_CHECKBOX,
 //    10, 10, 15, 15, window, (HMENU)ExternalTrackingID, GetModuleHandle(NULL), NULL);
         for (auto& config : config_windows) {
-            config.wnd = CreateWindowEx(NULL, config.window_type.c_str(), config.name.c_str(),
+            config.wnd = CreateWindowEx(config.window_style_ex, config.window_type.c_str(), config.name.c_str(),
                 config.style,
-                10, 20*config.id.get_id(), 300, 20, window, (HMENU)config.id.get_id(), (HINSTANCE)GetWindowLongPtr(window, GWLP_HINSTANCE), NULL);
-  //          std::cout << std::hex << "adding window 0x" << config.wnd << " to the map" << std::endl;
+                10, 20*config.id.get_id(), config.width, config.height, window, (HMENU)config.id.get_id(), (HINSTANCE)GetWindowLongPtr(window, GWLP_HINSTANCE), NULL);
+            std::cout << std::hex << "adding window 0x" << config.wnd << " to the map" << std::endl;
             config_window_map[config.wnd] = &config;
             Edit_Enable(config.wnd, true);
             EnableWindow(config.wnd, true);
             config.init(&config, window, comm_buffer);
         }
-#if 0
-        hwnd_ExternalTracking = CreateWindowEx(NULL, L"BUTTON", L"Enable External Tracking",
-            WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_FLAT | BS_TEXT | BS_CHECKBOX,
-            10, 10, 300, 15, window, (HMENU)ExternalTrackingID, GetModuleHandle(NULL), NULL);
-        if (hwnd_ExternalTracking == NULL)
-            return -1;
-#endif
+        init_complete = true;
+
 
         break;
 
@@ -595,23 +728,9 @@ LRESULT CALLBACK GUI_Manager::GUIWndProc(HWND window, UINT msg, WPARAM wp, LPARA
  //       std::cout << "WM_COMMAND window 0x" << std::hex << window << " wp 0x" << wp << " lp 0x" << lp << std::dec << std::endl;
         if (config_window_map.find((HWND)lp) != config_window_map.end()) {
             config_window_map[(HWND)lp]->wm_command(window, wp, lp, comm_buffer);
-            save_config_to_file(comm_buffer->config);
+            if(init_complete)save_config_to_file(comm_buffer->config);
         }
 
-#if 0
-        BOOL checked = IsDlgButtonChecked(window, ExternalTrackingID);
-        comm_buffer->external_tracking = !checked;
-        if (checked) {
-            std::cout << "checked" << std::endl;
-            CheckDlgButton(window, ExternalTrackingID, BST_UNCHECKED);
-            //SetWindowText(hwnd_ExternalTracking, TEXT(""));
-        }
-        else {
-            std::cout << "unchecked" << std::endl;
-            CheckDlgButton(window, ExternalTrackingID, BST_CHECKED);
-            //SetWindowText(hwnd_ExternalTracking, title);
-        }
-#endif
         break;
 
 

@@ -252,6 +252,12 @@ void reset_config_settings(config_data& config) {
     config.world_orientation_euler[0] = 0.0;
     config.world_orientation_euler[1] = 0.0;
     config.world_orientation_euler[2] = 0.0;
+    config.ipv4[0] = 127;
+    config.ipv4[1] = 0;
+    config.ipv4[2] = 0;
+    config.ipv4[3] = 1;
+    config.net_type = net_local;
+
 }
 
 void save_config_to_file(config_data& config) {
@@ -296,6 +302,13 @@ void save_config_to_file(config_data& config) {
     ofs << config.world_orientation_euler[0] << std::endl;
     ofs << config.world_orientation_euler[1] << std::endl;
     ofs << config.world_orientation_euler[2] << std::endl;
+
+    for(int i = 0; i<4; i++){
+        ofs << (unsigned)config.ipv4[i] << std::endl;
+    }
+
+    ofs << (unsigned)config.net_type << std::endl;
+
     ofs.close();
 }
 
@@ -318,33 +331,45 @@ void load_config_from_file(config_data& config) {
     std::ifstream ifs;
     ifs.open(exe_filename);
     if (ifs.is_open()) {
-        ifs >> config.vr_universe;
-        ifs >> config.be_objects;
-        ifs >> config.extra_prediction_ms;
-        ifs >> config.tracking_space_name;
-        ifs >> config.manufacturer_name;
-        ifs >> config.num_objects;
-        ifs >> config.external_tracking;
-        ifs >> config.track_hmd;
-        unsigned min_amp;
-        ifs >> min_amp;
+        if (ifs.good()) ifs >> config.vr_universe;
+        if (ifs.good())ifs >> config.be_objects;
+        if (ifs.good())ifs >> config.extra_prediction_ms;
+        if (ifs.good())ifs >> config.tracking_space_name;
+        if (ifs.good()) ifs >> config.manufacturer_name;
+        if (ifs.good()) ifs >> config.num_objects;
+        if (ifs.good()) ifs >> config.external_tracking;
+        if (ifs.good()) ifs >> config.track_hmd;
+        unsigned min_amp = 64;
+        if (ifs.good()) ifs >> min_amp;
         config.min_amplitude = min_amp;
         
-        ifs >> config.amplitude_scale;
-        ifs >> config.sqrt_pre_filter;
-        ifs >> config.sqrt_post_filter;
-        ifs >> config.do_rendering;
-        ifs >> config.do_world_transformation;
-        ifs >> config.world_translation[0];
-        ifs >> config.world_translation[1];
-        ifs >> config.world_translation[2];
-        ifs >> config.world_orientation_q.w;
-        ifs >> config.world_orientation_q.x;
-        ifs >> config.world_orientation_q.y;
-        ifs >> config.world_orientation_q.z;
-        ifs >> config.world_orientation_euler[0];
-        ifs >> config.world_orientation_euler[1];
-        ifs >> config.world_orientation_euler[2];
+        if (ifs.good()) ifs >> config.amplitude_scale;
+        if (ifs.good()) ifs >> config.sqrt_pre_filter;
+        if (ifs.good()) ifs >> config.sqrt_post_filter;
+        if (ifs.good()) ifs >> config.do_rendering;
+        if (ifs.good())ifs >> config.do_world_transformation;
+        if (ifs.good()) ifs >> config.world_translation[0];
+        if (ifs.good()) ifs >> config.world_translation[1];
+        if (ifs.good()) ifs >> config.world_translation[2];
+        if (ifs.good()) ifs >> config.world_orientation_q.w;
+        if (ifs.good()) ifs >> config.world_orientation_q.x;
+        if (ifs.good()) ifs >> config.world_orientation_q.y;
+        if (ifs.good()) ifs >> config.world_orientation_q.z;
+        if (ifs.good()) ifs >> config.world_orientation_euler[0];
+        if (ifs.good()) ifs >> config.world_orientation_euler[1];
+        if (ifs.good()) ifs >> config.world_orientation_euler[2];
+        if(ifs.good())
+        for (int i = 0; i < 4; i++) {
+            unsigned ip = 0;
+            if (ifs.good()) ifs >> ip;
+            config.ipv4[i] = ip;
+        }
+        unsigned temp = 0;
+        if (ifs.good()) ifs >> temp;
+        if (temp >= net_max_connection_types) temp = 0;
+        config.net_type = (e_connection_type)temp;
+
+
         ifs.close();
     }
 }
