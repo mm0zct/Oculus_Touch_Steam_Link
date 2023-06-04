@@ -308,7 +308,6 @@ public:                                                                         
                 ovrTrue);
         }
         m_time_of_last_pose = ovr_GetTimeInSeconds();// ss.HandPoses[isRightHand].TimeInSeconds;
-        float delta_t = (comm_buffer->config.extra_prediction_ms * 0.001f) + (ovr_GetTimeInSeconds() - ss.HandPoses[isRightHand].TimeInSeconds);
         DriverPose_t pose = { 0 };
         pose.poseIsValid = true;
         pose.result = TrackingResult_Running_OK;
@@ -316,7 +315,7 @@ public:                                                                         
 
         ovrQuatf hand_qoffset = { 0.3420201, 0, 0, 0.9396926 };
         ovrQuatf hand_input = ss.HandPoses[isRightHand].ThePose.Orientation;
-        ovrQuatf hand_result = ovrQuatfmul(hand_input, hand_qoffset);
+        ovrQuatf hand_result = hand_input;// ovrQuatfmul(hand_input, hand_qoffset);
         ovrVector3f hand_voffset = { 0,0,0 };
         if (isRightHand) {
             hand_voffset = rotateVector2(hand_offset, hand_input);
@@ -353,7 +352,7 @@ public:                                                                         
 
         ovrVector3f linAcc = (ss.HandPoses[isRightHand].LinearAcceleration);
         ovrVector3f linVel = (ss.HandPoses[isRightHand].LinearVelocity);
-        ovrQuatf hand_nqoffset = { 0.3420201, 0, 0, -0.9396926 };
+  //      ovrQuatf hand_nqoffset = { 0.3420201, 0, 0, -0.9396926 };
         /*linAcc = rotateVector2(linAcc, hand_qoffset);
         linVel = rotateVector2(linVel, hand_nqoffset);*/    //do not do this
 
@@ -362,7 +361,7 @@ public:                                                                         
         pose.vecAcceleration[1] = linAcc.y;
         pose.vecAcceleration[2] = linAcc.z;
 
-        pose.qWorldFromDriverRotation = HmdQuaternion_Init(1, 0, 0, 0);
+        pose.qWorldFromDriverRotation = HmdQuaternion_Init(hand_qoffset.w, hand_qoffset.x, hand_qoffset.y, hand_qoffset.z);
         pose.qDriverFromHeadRotation = HmdQuaternion_Init(1, 0, 0, 0);
 
         pose.vecVelocity[0] = linVel.x;
