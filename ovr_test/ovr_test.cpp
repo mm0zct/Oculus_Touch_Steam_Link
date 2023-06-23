@@ -80,10 +80,10 @@ void main_loop(ovrSession mSession, HANDLE comm_mutex, shared_buffer* comm_buffe
         comm_buffer->input_state.IndexTrigger[i] = inputState.IndexTrigger[i];
         comm_buffer->input_state.Thumbstick[i] = inputState.Thumbstick[i];
 
-        if (comm_buffer->vib_valid[i]) {
+        if (comm_buffer->vib_valid[i] && comm_buffer->vib_amplitude[i]) {
             add_vibration(i == 1, comm_buffer->vib_frequency[i], comm_buffer->vib_amplitude[i], comm_buffer->vib_duration_s[i]);
             comm_buffer->vib_valid[i] = 0;
-            //printf("vib[%u] dur %f=%f | freq %f | amp %f\n", i, comm_buffer->vib_duration_s[i], comm_buffer->vib_duration_s[i]*320, comm_buffer->vib_frequency[i], comm_buffer->vib_amplitude[i]);
+            printf("vib[%u] dur %f=%f | freq %f | amp %f\n", i, comm_buffer->vib_duration_s[i], comm_buffer->vib_duration_s[i]*320, comm_buffer->vib_frequency[i], comm_buffer->vib_amplitude[i]);
 #if 0
             int duration = comm_buffer->vib_duration_s[i] * 320;
             if (duration > 128) duration = 128;
@@ -237,9 +237,9 @@ void reset_config_settings(config_data& config) {
     config.external_tracking = false;
     config.track_hmd = false;
     config.min_amplitude = 64;
-    config.amplitude_scale = 10.0;
+    config.amplitude_scale = 1.0;
     config.sqrt_pre_filter = false;
-    config.sqrt_post_filter = false;
+    config.sqrt_post_filter = true;
     config.do_rendering = false;
     config.do_world_transformation = false;
     config.world_translation[0] = 0.0;
@@ -467,20 +467,25 @@ std::vector<uint8_t> pulse_patterns[17] = {
     {},
     {255},
     {255,0},
-    {},
-    {196,255,128,0},
-    {},
-    {196,255,196,128,0,0,0},
-    {},
-    {196,255,255,128,64,0,0,0},
-    {},
-    {196,255,255,196,128,0,0,0,0,0},
-    {},
-    {},
-    {},
-    {},
-    {},
-    {64,128,196,255,255,128,64,32,0,0,0,0,0,0,0,0}
+    {255,0,0},
+    //{196,255,128,0},
+    {255,0,0,0},
+    {255,0,0,0,0},
+    //{196,255,196,128,0,0,0},
+    {255,0,0,0,0,0},
+    {255,0,0,0,0,0,0},
+    //{196,255,255,128,64,0,0,0},
+    {255,0,0,0,0,0,0,0},
+    {255,0,0,0,0,0,0,0,0},
+    {255,0,0,0,0,0,0,0,0,0},
+    //{196,255,255,196,128,0,0,0,0,0},
+    {255,0,0,0,0,0,0,0,0,0,0},
+    {255,0,0,0,0,0,0,0,0,0,0,0},
+    {255,0,0,0,0,0,0,0,0,0,0,0,0},
+    {255,0,0,0,0,0,0,0,0,0,0,0,0,0},
+    {255,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
+    {255,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}
+    //{64,128,196,255,255,128,64,32,0,0,0,0,0,0,0,0}
 };
 
 
@@ -513,51 +518,59 @@ void add_vib_sample_part1(bool isRightHand, uint8_t pulse_pattern_index, uint32_
         }
     }
     
-    
+    printf("\n");
     for (int i = 0; i < sample_count; i++) {
         uint8_t sample_value = pulse_patterns[pulse_pattern_index][(sample_offset + i) % pulse_pattern_index];
+        printf("0x%02x ", (unsigned int)clamp_scale(sample_value, amplitude));
         add_vib_sample(isRightHand, clamp_scale(sample_value, amplitude), next_index + i, pulse_pattern_index, (sample_offset + i) % pulse_pattern_index);
-
     }
-
+    printf("\n");
 }
 
-void add_vibration(bool isRightHand, float amplitude, float frequency, float duration) {
+void add_vibration(bool isRightHand, float frequency, float amplitude, float duration) {
 
     //std::cout << " adding haptic for amplitude " << amplitude << " frequency " << frequency << " duration " << duration << std::endl;
 
     if ((amplitude <= 0) || (frequency <= 0) /*|| (duration <= 0)*/) return;
-
+    if (frequency > 1.0)frequency = 1.0;
     float amp = amplitude/100.0f;
     float freq = frequency * 320.0f;
-    uint32_t requested_duration = duration * 320; // 320 Hz processing rate
-    if (requested_duration < 2) requested_duration = 2;
+    uint32_t requested_duration = duration * 160; // 320 Hz processing rate? seems to be 160
+    //if (requested_duration < 2) requested_duration = 2;
+    if (requested_duration < 1) requested_duration = 1;
     uint32_t min_duration = 1;
-    uint32_t pulse_width = 1;
-    if (freq < 160) {
+   // uint32_t pulse_width = 1;
+    min_duration = 320 / freq;
+    if (min_duration < 1) min_duration = 1;
+    if (min_duration > 16)min_duration = 16;
+  /*  if (freq <= 160) {
         min_duration = 2;
-        pulse_width = 1;
+    //    pulse_width = 1;
     }
-    if (freq < 80) {
+    if (freq <= 120) {
+        min_duration = 3;
+   //     pulse_width = 1;
+    }
+    if (freq <= 80) {
         min_duration = 4;
-        pulse_width = 2;
+   //     pulse_width = 2;
     }
-    if (freq < 60) {
+    if (freq <= 60) {
         min_duration = 6;
-        pulse_width = 3;
+   //     pulse_width = 3;
     }
-    if (freq < 40) {
+    if (freq <= 40) {
         min_duration = 8;
-        pulse_width = 4;
+    //    pulse_width = 4;
     }
-    if (freq < 32) {
+    if (freq <= 32) {
         min_duration = 10;
-        pulse_width = 5;
+    //    pulse_width = 5;
     }
-    if (freq < 20) {
+    if (freq <= 20) {
         min_duration = 16;
-        pulse_width = 8;
-    }
+    //    pulse_width = 8;
+    }*/
   
     if (min_duration > requested_duration) requested_duration = min_duration;
 
@@ -566,7 +579,7 @@ void add_vibration(bool isRightHand, float amplitude, float frequency, float dur
   
 
       std::cout << " adding haptic for amplitude " << amplitude << " -> " << amp << " frequency " << frequency << " -> " << freq << " duration " << duration << " ->" << requested_duration
-      <<" pulse_width " << pulse_width << std::endl;
+      <<" pulse_width " << min_duration << std::endl;
       
       add_vib_sample_part1(isRightHand, min_duration, requested_duration, amp);
 

@@ -7,6 +7,9 @@
 #include <tuple>
 #define _USE_MATH_DEFINES
 #include <math.h>
+
+#define DEBUG_VIB 1
+
 class unique_window_id {
 public:
     unique_window_id() {
@@ -392,7 +395,7 @@ std::vector<config_window_object> config_windows = {
 
 , { L"World Rotation Offset Euler Yaw Pitch Roll",L"EDIT", WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_FLAT | BS_TEXT | ES_READONLY,
         default_wm_command, default_init }
-, { L"1.0000 0.0000 0.0000 0.0000",L"EDIT", WS_VISIBLE | WS_CHILD | ES_NUMBER,
+, { L"0.0000 0.0000 0.0000",L"EDIT", WS_VISIBLE | WS_CHILD | ES_NUMBER,
             [](HWND window, WPARAM wp, LPARAM lp, shared_buffer* comm_buffer) {
                 switch (HIWORD(wp))
                 {
@@ -403,7 +406,7 @@ std::vector<config_window_object> config_windows = {
                             const size_t len = 64;
                             WCHAR Buffer[len];
                             WCHAR CompBuffer[len];
-                            double offset[4];
+                            double offset[3];
                             GetWindowText((HWND)lp, Buffer, len);
                             swscanf_s(Buffer, L"%lf %lf %lf", &offset[0], &offset[1], &offset[2]);
                             std::wcout << L"control text is: " << Buffer << std::endl;
@@ -500,6 +503,32 @@ std::vector<config_window_object> config_windows = {
         GUI_Manager::self->reset_settings_window();
         return;
     }, default_init }
+#ifdef DEBUG_VIB
+ , { L"frequency amplitude duration",L"EDIT", WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_FLAT | BS_TEXT | ES_READONLY,
+                    default_wm_command, default_init }
+        , { L"0.0000 0.0000 0.0000",L"EDIT", WS_VISIBLE | WS_CHILD | ES_NUMBER,
+                    [](HWND window, WPARAM wp, LPARAM lp, shared_buffer* comm_buffer) {
+                        switch (HIWORD(wp))
+                        {
+                        case EN_CHANGE:
+                            {
+                                const size_t len = 64;
+                                WCHAR Buffer[len];
+                                double offset[3];
+                                GetWindowText((HWND)lp, Buffer, len);
+                                swscanf_s(Buffer, L"%lf %lf %lf", &offset[0], &offset[1], &offset[2]);
+                                std::wcout << L"control text is: " << Buffer << std::endl;
+                                std::cout << "parsed vib " << offset[0] << " " << offset[1] << " " << offset[2] << std::endl;
+  
+                                comm_buffer->vib_frequency[0] = offset[0];
+                                comm_buffer->vib_amplitude[0] = offset[1];
+                                comm_buffer->vib_duration_s[0] = offset[2];
+                                comm_buffer->vib_valid[0] = true;
+                            }
+                        }
+                        return;
+                    }, default_init }
+#endif
 };
 
 std::map<HWND, config_window_object*> config_window_map;
