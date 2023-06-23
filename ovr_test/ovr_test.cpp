@@ -48,7 +48,7 @@ void main_loop(ovrSession mSession, HANDLE comm_mutex, shared_buffer* comm_buffe
         if ((ovr_pose.ThePose.Orientation.x != 0) && (ovr_pose.ThePose.Orientation.y != 0) && (ovr_pose.ThePose.Orientation.z != 0)){
             comm_buffer->object_poses[i] = ovr_pose;
         }
-        if ((frame_count & 0x7FF) == 0) {
+        if (0){//(frame_count & 0x7FF) == 0) {
             std::cout.precision(4);
 
             std::cout << "Object" << i << std::dec << " x " <<
@@ -125,7 +125,7 @@ void main_loop(ovrSession mSession, HANDLE comm_mutex, shared_buffer* comm_buffe
 #endif
         }
         ReleaseMutex(comm_mutex);
-        if ((frame_count & 0x7FF) == 0) {
+        if (0){//(frame_count & 0x7FF) == 0) {
             std::cout.precision(4);
 
             std::cout << (i == 0 ? "lhand" : "rhand") << " 0x" << std::fixed <<
@@ -533,7 +533,7 @@ void add_vibration(bool isRightHand, float frequency, float amplitude, float dur
 
     if ((amplitude <= 0) || (frequency <= 0) /*|| (duration <= 0)*/) return;
     if (frequency > 1.0)frequency = 1.0;
-    float amp = amplitude/100.0f;
+    float amp = amplitude;
     float freq = frequency * 320.0f;
     uint32_t requested_duration = duration * 160; // 320 Hz processing rate? seems to be 160
     //if (requested_duration < 2) requested_duration = 2;
