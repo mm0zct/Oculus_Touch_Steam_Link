@@ -524,6 +524,11 @@ std::vector<config_window_object> config_windows = {
                                 comm_buffer->vib_amplitude[0] = offset[1];
                                 comm_buffer->vib_duration_s[0] = offset[2];
                                 comm_buffer->vib_valid[0] = true;
+
+                                comm_buffer->vib_frequency[1] = offset[0];
+                                comm_buffer->vib_amplitude[1] = offset[1];
+                                comm_buffer->vib_duration_s[1] = offset[2];
+                                comm_buffer->vib_valid[1] = true;
                             }
                         }
                         return;
