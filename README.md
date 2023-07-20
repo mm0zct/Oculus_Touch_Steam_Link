@@ -53,3 +53,7 @@ If you do not have controllers for your primary HMD, then instead of a controlle
 At this point you’re all calibrated and it should save! You only need to and should only "calibrate" one controller (this is because you're not actually calibrating controllers, you're calibrating the native HMD and SteamVR play spaces using a controller). It is likely only one of the controllers shows up when outside of the steamVR menu and/or you can't click any buttons on the touch controllers. Just exit out of steamVR, turn off your native controllers (if on Quest, go into the 'input' section of Virtual Desktop and tell it to have the Quest controllers emulate a regular joypad), and go back into SteamVR.
 
 From here, set up a proper steamVR chaperone so everything runs correctly: https://github.com/PumkinSpice/MixedVR/wiki/ReadMe#using-steamvr-chaperone-instead-of-wmr-bounds
+
+
+
+If you want to use the cv1 controllers as trackers for fbt with an oculus quest you can check out a video RelativelyRelaxing on discord made here: https://youtu.be/ehyzp78Dowk
