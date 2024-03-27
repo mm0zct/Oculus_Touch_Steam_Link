@@ -29,6 +29,7 @@ limitations under the License.
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <wchar.h>
 #include "OVR_CAPI.h"
 #include "OVR_CAPI_Prototypes.h"
 #include "OVR_ErrorCode.h"
@@ -44,6 +45,7 @@ limitations under the License.
 #endif
 
 #include "OVR_CAPI_D3D.h"
+#pragma comment(lib, "advapi32.lib")
 #else
 #if defined(__APPLE__)
 #include <libgen.h>
@@ -59,11 +61,6 @@ limitations under the License.
 #include "OVR_CAPI_GL.h"
 #include "OVR_CAPI_Vk.h"
 
-
-#if defined(_MSC_VER)
-#pragma warning(push)
-#pragma warning(disable : 4996) // 'getenv': This function or variable may be unsafe.
-#endif
 
 // clang-format off
 static const uint8_t OculusSDKUniqueIdentifier[] = {
@@ -174,406 +171,77 @@ static size_t OVR_strlcat(char* dest, const char* src, size_t destsize) {
   return t;
 }
 
-#if defined(__APPLE__)
-static ovrBool
-OVR_strend(const char* pStr, const char* pFind, size_t strLength, size_t findLength) {
-  if (strLength == (size_t)-1)
-    strLength = strlen(pStr);
-  if (findLength == (size_t)-1)
-    findLength = strlen(pFind);
-  if (strLength >= findLength)
-    return (strcmp(pStr + strLength - findLength, pFind) == 0);
-  return ovrFalse;
-}
+#if defined(_WIN32)
+static size_t OVR_wstrlcat(wchar_t* dest, const wchar_t* src, size_t destsize) {
+  const size_t d = destsize ? wcslen(dest) : 0;
+  const size_t s = wcslen(src);
+  const size_t t = s + d;
 
-static ovrBool OVR_isBundleFolder(const char* filePath) {
-  static const char* extensionArray[] = {".app", ".bundle", ".framework", ".plugin", ".kext"};
-  size_t i;
-
-  for (i = 0; i < sizeof(extensionArray) / sizeof(extensionArray[0]); i++) {
-    if (OVR_strend(filePath, extensionArray[i], (size_t)-1, (size_t)-1))
-      return ovrTrue;
+  if (t < destsize)
+    memcpy(dest + d, src, (s + 1) * sizeof(*src));
+  else {
+    if (destsize) {
+      memcpy(dest + d, src, ((destsize - d) - 1) * sizeof(*src));
+      dest[destsize - 1] = 0;
+    }
   }
 
-  return ovrFalse;
+  return t;
 }
-#endif
+#endif // defined(_WIN32)
 
-#if !defined(_WIN32)
-static ovrBool OVR_GetCurrentWorkingDirectory(
+#if defined(_WIN32)
+static ovrBool OVR_GetOculusBaseDirectory(
     FilePathCharType* directoryPath,
     size_t directoryPathCapacity) {
-#if defined(_WIN32)
-  DWORD dwSize = GetCurrentDirectoryW((DWORD)directoryPathCapacity, directoryPath);
-
-  if ((dwSize > 0) &&
-      (directoryPathCapacity > 1)) // Test > 1 so we have room to possibly append a \ char.
-  {
-    size_t length = wcslen(directoryPath);
-
-    if ((length == 0) ||
-        ((directoryPath[length - 1] != L'\\') && (directoryPath[length - 1] != L'/'))) {
-      directoryPath[length++] = L'\\';
-      directoryPath[length] = L'\0';
-    }
-
-    return ovrTrue;
+  DWORD length = (DWORD)directoryPathCapacity;
+  HKEY key = 0;
+  // Query the 32bit key even if 64bit build
+  LONG result = RegOpenKeyExW(
+      HKEY_LOCAL_MACHINE, L"Software\\Oculus VR, LLC\\Oculus", 0, KEY_READ | KEY_WOW64_32KEY, &key);
+  if (result != ERROR_SUCCESS) {
+    return ovrFalse;
   }
 
-#else
-  char* cwd = getcwd(directoryPath, directoryPathCapacity);
+  result = RegGetValueW(
+      key, NULL, L"Base", RRF_RT_REG_SZ | RRF_ZEROONFAILURE, NULL, (LPBYTE)directoryPath, &length);
+  RegCloseKey(key);
 
-  if (cwd && directoryPath[0] &&
-      (directoryPathCapacity > 1)) // Test > 1 so we have room to possibly append a / char.
-  {
-    size_t length = strlen(directoryPath);
-
-    if ((length == 0) || (directoryPath[length - 1] != '/')) {
-      directoryPath[length++] = '/';
-      directoryPath[length] = '\0';
-    }
-
-    return ovrTrue;
-  }
-#endif
-
-  if (directoryPathCapacity > 0)
-    directoryPath[0] = '\0';
-
-  return ovrFalse;
+  return result == ERROR_SUCCESS ? ovrTrue : ovrFalse;
 }
 
-// The appContainer argument is specific currently to only Macintosh. If true and the application is
-// a .app bundle then it returns the
-// location of the bundle and not the path to the executable within the bundle. Else return the path
-// to the executable binary itself.
-// The moduleHandle refers to the relevant dynamic (a.k.a. shared) library. The main executable is
-// the main module, and each of the shared
-// libraries is a module. This way you can specify that you want to know the directory of the given
-// shared library, which may be different
-// from the main executable. If the moduleHandle is NULL then the current application module is
-// used.
-static ovrBool OVR_GetCurrentApplicationDirectory(
-    FilePathCharType* directoryPath,
-    size_t directoryPathCapacity,
-    ovrBool appContainer,
-    ModuleHandleType moduleHandle) {
-#if defined(_WIN32)
-  DWORD length = GetModuleFileNameW(moduleHandle, directoryPath, (DWORD)directoryPathCapacity);
-  DWORD pos;
+static ovrBool IsHighIntegrityLevel() {
+  // Allocate a fixed size buffer for the maximum possible size:
+  // SID_AND_ATTRIBUTES can be the size of a SID + size of DWORD (for attributes).
+  uint8_t mandatoryLabelBuffer[SECURITY_MAX_SID_SIZE + sizeof(DWORD)];
+  DWORD bufferSize;
+  HANDLE processToken;
+  DWORD integrityLevel = SECURITY_MANDATORY_HIGH_RID;
 
-  if ((length != 0) &&
-      (length <
-       (DWORD)directoryPathCapacity)) // If there wasn't an error and there was enough capacity...
-  {
-    for (pos = length; (pos > 0) && (directoryPath[pos] != '\\') && (directoryPath[pos] != '/');
-         --pos) {
-      if ((directoryPath[pos - 1] != '\\') && (directoryPath[pos - 1] != '/'))
-        directoryPath[pos - 1] = 0;
-    }
-
-    return ovrTrue;
+  if (OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY | TOKEN_QUERY_SOURCE, &processToken) == 0) {
+    return ovrFalse;
   }
 
-  (void)appContainer; // Not used on this platform.
-
-#elif defined(__APPLE__)
-  uint32_t directoryPathCapacity32 = (uint32_t)directoryPathCapacity;
-  int result = _NSGetExecutablePath(directoryPath, &directoryPathCapacity32);
-
-  if (result == 0) // If success...
-  {
-    char realPath[OVR_MAX_PATH];
-
-    if (realpath(directoryPath, realPath)) // realpath returns the canonicalized absolute file path.
-    {
-      size_t length = 0;
-
-      if (appContainer) // If the caller wants the path to the containing bundle...
-      {
-        char containerPath[OVR_MAX_PATH];
-        ovrBool pathIsContainer;
-
-        OVR_strlcpy(containerPath, realPath, sizeof(containerPath));
-        pathIsContainer = OVR_isBundleFolder(containerPath);
-
-        while (!pathIsContainer && strncmp(containerPath, ".", OVR_MAX_PATH) &&
-               strncmp(containerPath, "/", OVR_MAX_PATH)) // While the container we're looking for
-        // is not found and while the path doesn't
-        // start with a . or /
-        {
-          OVR_strlcpy(containerPath, dirname(containerPath), sizeof(containerPath));
-          pathIsContainer = OVR_isBundleFolder(containerPath);
-        }
-
-        if (pathIsContainer)
-          length = OVR_strlcpy(directoryPath, containerPath, directoryPathCapacity);
-      }
-
-      if (length == 0) // If not set above in the appContainer block...
-        length = OVR_strlcpy(directoryPath, realPath, directoryPathCapacity);
-
-      while (length-- && (directoryPath[length] != '/'))
-        directoryPath[length] =
-            '\0'; // Strip the file name from the file path, leaving a trailing / char.
-
-      return ovrTrue;
-    }
+  if (GetTokenInformation(
+          processToken,
+          TokenIntegrityLevel,
+          mandatoryLabelBuffer,
+          sizeof(mandatoryLabelBuffer),
+          &bufferSize) != 0) {
+    TOKEN_MANDATORY_LABEL* mandatoryLabel = (TOKEN_MANDATORY_LABEL*)mandatoryLabelBuffer;
+    const DWORD subAuthorityCount = *GetSidSubAuthorityCount(mandatoryLabel->Label.Sid);
+    integrityLevel = *GetSidSubAuthority(mandatoryLabel->Label.Sid, subAuthorityCount - 1);
   }
 
-  (void)moduleHandle; // Not used on this platform.
-
-#else
-  ssize_t length = readlink("/proc/self/exe", directoryPath, directoryPathCapacity);
-  ssize_t pos;
-
-  if (length > 0) {
-    for (pos = length; (pos > 0) && (directoryPath[pos] != '/'); --pos) {
-      if (directoryPath[pos - 1] != '/')
-        directoryPath[pos - 1] = '\0';
-    }
-
-    return ovrTrue;
-  }
-
-  (void)appContainer; // Not used on this platform.
-  (void)moduleHandle;
-#endif
-
-  if (directoryPathCapacity > 0)
-    directoryPath[0] = '\0';
-
-  return ovrFalse;
+  CloseHandle(processToken);
+  return integrityLevel > SECURITY_MANDATORY_MEDIUM_RID ? ovrTrue : ovrFalse;
 }
 #endif // !defined(_WIN32)
 
-#if defined(_WIN32)
-
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable : 4201)
-#endif
-
-#include <Softpub.h>
-#include <Wincrypt.h>
-
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
-
-// Expected certificates:
-#define ExpectedNumCertificates 3
-typedef struct CertificateEntry_t {
-  const wchar_t* Issuer;
-  const wchar_t* Subject;
-} CertificateEntry;
-
-CertificateEntry NewCertificateChain[ExpectedNumCertificates] = {
-    {L"DigiCert SHA2 Assured ID Code Signing CA", L"Oculus VR, LLC"},
-    {L"DigiCert Assured ID Root CA", L"DigiCert SHA2 Assured ID Code Signing CA"},
-    {L"DigiCert Assured ID Root CA", L"DigiCert Assured ID Root CA"},
-};
-
-#define CertificateChainCount 1
-CertificateEntry* AllowedCertificateChains[CertificateChainCount] = {NewCertificateChain};
-
-typedef DWORD(WINAPI* PtrCertGetNameStringW)(
-    PCCERT_CONTEXT pCertContext,
-    DWORD dwType,
-    DWORD dwFlags,
-    void* pvTypePara,
-    LPWSTR pszNameString,
-    DWORD cchNameString);
-typedef LONG(WINAPI* PtrWinVerifyTrust)(HWND hwnd, GUID* pgActionID, LPVOID pWVTData);
-typedef CRYPT_PROVIDER_DATA*(WINAPI* PtrWTHelperProvDataFromStateData)(HANDLE hStateData);
-typedef CRYPT_PROVIDER_SGNR*(WINAPI* PtrWTHelperGetProvSignerFromChain)(
-    CRYPT_PROVIDER_DATA* pProvData,
-    DWORD idxSigner,
-    BOOL fCounterSigner,
-    DWORD idxCounterSigner);
-
-PtrCertGetNameStringW m_PtrCertGetNameStringW = 0;
-PtrWinVerifyTrust m_PtrWinVerifyTrust = 0;
-PtrWTHelperProvDataFromStateData m_PtrWTHelperProvDataFromStateData = 0;
-PtrWTHelperGetProvSignerFromChain m_PtrWTHelperGetProvSignerFromChain = 0;
-
-typedef enum ValidateCertificateContentsResult_ {
-  VCCRSuccess = 0,
-  VCCRErrorCertCount = -1,
-  VCCRErrorTrust = -2,
-  VCCRErrorValidation = -3
-} ValidateCertificateContentsResult;
-
-static ValidateCertificateContentsResult ValidateCertificateContents(
-    CertificateEntry* chain,
-    CRYPT_PROVIDER_SGNR* cps) {
-  int certIndex;
-
-  if (!cps || !cps->pasCertChain || cps->csCertChain != ExpectedNumCertificates) {
-    return VCCRErrorCertCount;
-  }
-
-  for (certIndex = 0; certIndex < ExpectedNumCertificates; ++certIndex) {
-    CRYPT_PROVIDER_CERT* pCertData = &cps->pasCertChain[certIndex];
-    wchar_t subjectStr[400] = {0};
-    wchar_t issuerStr[400] = {0};
-
-    if ((pCertData->fSelfSigned && !pCertData->fTrustedRoot) || pCertData->fTestCert) {
-      return VCCRErrorTrust;
-    }
-
-    m_PtrCertGetNameStringW(
-        pCertData->pCert,
-        CERT_NAME_ATTR_TYPE,
-        0,
-        szOID_COMMON_NAME,
-        subjectStr,
-        ARRAYSIZE(subjectStr));
-
-    m_PtrCertGetNameStringW(
-        pCertData->pCert,
-        CERT_NAME_ATTR_TYPE,
-        CERT_NAME_ISSUER_FLAG,
-        0,
-        issuerStr,
-        ARRAYSIZE(issuerStr));
-
-    if (wcscmp(subjectStr, chain[certIndex].Subject) != 0 ||
-        wcscmp(issuerStr, chain[certIndex].Issuer) != 0) {
-      return VCCRErrorValidation;
-    }
-  }
-
-  return VCCRSuccess;
-}
-
-#define OVR_SIGNING_CONVERT_PTR(ftype, fptr, procaddr) \
-  {                                                    \
-    union {                                            \
-      ftype p1;                                        \
-      ModuleFunctionType p2;                           \
-    } u;                                               \
-    u.p2 = procaddr;                                   \
-    fptr = u.p1;                                       \
-  }
-
-static BOOL OVR_Win32_SignCheck(FilePathCharType* fullPath, HANDLE hFile) {
-  WINTRUST_FILE_INFO fileData;
-  WINTRUST_DATA wintrustData;
-  GUID actionGUID = WINTRUST_ACTION_GENERIC_VERIFY_V2;
-  LONG resultStatus;
-  BOOL verified = FALSE;
-  HMODULE libWinTrust = LoadLibraryW(L"wintrust");
-  HMODULE libCrypt32 = LoadLibraryW(L"crypt32");
-  if (libWinTrust == NULL || libCrypt32 == NULL) {
-    return FALSE;
-  }
-
-  OVR_SIGNING_CONVERT_PTR(
-      PtrCertGetNameStringW,
-      m_PtrCertGetNameStringW,
-      GetProcAddress(libCrypt32, "CertGetNameStringW"));
-  OVR_SIGNING_CONVERT_PTR(
-      PtrWinVerifyTrust, m_PtrWinVerifyTrust, GetProcAddress(libWinTrust, "WinVerifyTrust"));
-  OVR_SIGNING_CONVERT_PTR(
-      PtrWTHelperProvDataFromStateData,
-      m_PtrWTHelperProvDataFromStateData,
-      GetProcAddress(libWinTrust, "WTHelperProvDataFromStateData"));
-  OVR_SIGNING_CONVERT_PTR(
-      PtrWTHelperGetProvSignerFromChain,
-      m_PtrWTHelperGetProvSignerFromChain,
-      GetProcAddress(libWinTrust, "WTHelperGetProvSignerFromChain"));
-
-  if (m_PtrCertGetNameStringW == NULL || m_PtrWinVerifyTrust == NULL ||
-      m_PtrWTHelperProvDataFromStateData == NULL || m_PtrWTHelperGetProvSignerFromChain == NULL) {
-    return FALSE;
-  }
-
-  if (hFile == INVALID_HANDLE_VALUE || fullPath == NULL) {
-    return FALSE;
-  }
-
-  ZeroMemory(&fileData, sizeof(fileData));
-  fileData.cbStruct = sizeof(fileData);
-  fileData.pcwszFilePath = fullPath;
-  fileData.hFile = hFile;
-
-  ZeroMemory(&wintrustData, sizeof(wintrustData));
-  wintrustData.cbStruct = sizeof(wintrustData);
-  wintrustData.pFile = &fileData;
-  wintrustData.dwUnionChoice = WTD_CHOICE_FILE; // Specify WINTRUST_FILE_INFO.
-  wintrustData.dwUIChoice = WTD_UI_NONE; // Do not display any UI.
-  wintrustData.dwUIContext = WTD_UICONTEXT_EXECUTE; // Hint that this is about app execution.
-  wintrustData.fdwRevocationChecks = WTD_REVOKE_NONE;
-  wintrustData.dwProvFlags = WTD_REVOCATION_CHECK_NONE;
-  wintrustData.dwStateAction = WTD_STATEACTION_VERIFY;
-  wintrustData.hWVTStateData = 0;
-
-  resultStatus = m_PtrWinVerifyTrust(
-      (HWND)INVALID_HANDLE_VALUE, // Do not display any UI.
-      &actionGUID, // V2 verification
-      &wintrustData);
-
-  if (resultStatus == ERROR_SUCCESS && wintrustData.hWVTStateData != 0 &&
-      wintrustData.hWVTStateData != INVALID_HANDLE_VALUE) {
-    CRYPT_PROVIDER_DATA* cpd = m_PtrWTHelperProvDataFromStateData(wintrustData.hWVTStateData);
-    if (cpd && cpd->csSigners == 1) {
-      CRYPT_PROVIDER_SGNR* cps = m_PtrWTHelperGetProvSignerFromChain(cpd, 0, FALSE, 0);
-      int chainIndex;
-      for (chainIndex = 0; chainIndex < CertificateChainCount; ++chainIndex) {
-        CertificateEntry* chain = AllowedCertificateChains[chainIndex];
-        if (VCCRSuccess == ValidateCertificateContents(chain, cps)) {
-          verified = TRUE;
-          break;
-        }
-      }
-    }
-  }
-
-  wintrustData.dwStateAction = WTD_STATEACTION_CLOSE;
-
-  m_PtrWinVerifyTrust(
-      (HWND)INVALID_HANDLE_VALUE, // Do not display any UI.
-      &actionGUID, // V2 verification
-      &wintrustData);
-
-  return verified;
-}
-
-#endif // #if defined(_WIN32)
-
 static ModuleHandleType OVR_OpenLibrary(const FilePathCharType* libraryPath, ovrResult* result) {
-#if defined(_WIN32)
-  DWORD fullPathNameLen = 0;
-  FilePathCharType fullPath[MAX_PATH] = {0};
-  HANDLE hFilePinned = INVALID_HANDLE_VALUE;
-  ModuleHandleType hModule = 0;
-
   *result = ovrSuccess;
-
-  fullPathNameLen = GetFullPathNameW(libraryPath, MAX_PATH, fullPath, 0);
-  if (fullPathNameLen <= 0 || fullPathNameLen >= MAX_PATH) {
-    *result = ovrError_LibPath;
-    return NULL;
-  }
-
-  hFilePinned = CreateFileW(
-      fullPath, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, FILE_ATTRIBUTE_READONLY, 0);
-
-  if (hFilePinned == INVALID_HANDLE_VALUE) {
-    *result = ovrError_LibPath;
-    return NULL;
-  }
-
-  if (!OVR_Win32_SignCheck(fullPath, hFilePinned)) {
-    *result = ovrError_LibSignCheck;
-    CloseHandle(hFilePinned);
-    return NULL;
-  }
-
-  hModule = LoadLibraryW(fullPath);
-
-  CloseHandle(hFilePinned);
+#if defined(_WIN32)
+  ModuleHandleType hModule = LoadLibraryExW(libraryPath, NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
 
   if (hModule == NULL) {
     *result = ovrError_LibLoad;
@@ -581,8 +249,6 @@ static ModuleHandleType OVR_OpenLibrary(const FilePathCharType* libraryPath, ovr
 
   return hModule;
 #else
-  *result = ovrSuccess;
-
   // Don't bother trying to dlopen() a file that is not even there.
   if (access(libraryPath, X_OK | R_OK) != 0) {
     *result = ovrError_LibPath;
@@ -634,6 +300,9 @@ static ModuleHandleType OVR_FindLibraryPath(
     ovrResult* result) {
   ModuleHandleType moduleHandle;
   FilePathCharType developerDir[OVR_MAX_PATH] = {'\0'};
+#if defined(_WIN32)
+  FilePathCharType oculusInstallDir[OVR_MAX_PATH] = {'\0'};
+#endif // defined(_WIN32)
 
 #if defined(_MSC_VER)
 #if defined(_WIN64)
@@ -668,13 +337,35 @@ static ModuleHandleType OVR_FindLibraryPath(
 
   {
 #if defined(_WIN32)
-    size_t length;
-    _wgetenv_s(&length, developerDir, _countof(developerDir), L"LIBOVR_DLL_DIR");
-    if ((length != 0) && (length < _countof(developerDir)) &&
-        developerDir[length - 2] != OVR_FILE_PATH_SEPARATOR[0]) {
-      assert(developerDir[length - 1] == '\0');
-      developerDir[length - 1] = OVR_FILE_PATH_SEPARATOR[0];
-      developerDir[length] = '\0';
+    // Validate we are not high integrity level (i.e. not admin)
+    // to avoid pulling env vars set by non-elevated app.
+    if (!IsHighIntegrityLevel()) {
+      size_t length;
+      errno_t success =
+          _wgetenv_s(&length, developerDir, _countof(developerDir), L"LIBOVR_DLL_DIR");
+      if ((success == 0) && (length != 0) && (length < _countof(developerDir)) &&
+          developerDir[length - 2] != OVR_FILE_PATH_SEPARATOR[0]) {
+        OVR_wstrlcat(developerDir, OVR_FILE_PATH_SEPARATOR, _countof(developerDir));
+      }
+    }
+
+    if (OVR_GetOculusBaseDirectory(oculusInstallDir, _countof(oculusInstallDir)) == ovrTrue) {
+      size_t baseDirLength = wcslen(oculusInstallDir);
+
+      // If missing a trailing path separator then append one.
+      if ((baseDirLength > 0) && (baseDirLength < _countof(oculusInstallDir)) &&
+          (oculusInstallDir[baseDirLength - 1] != OVR_FILE_PATH_SEPARATOR[0])) {
+        baseDirLength =
+            OVR_wstrlcat(oculusInstallDir, OVR_FILE_PATH_SEPARATOR, _countof(oculusInstallDir));
+      }
+
+#define OVR_RUNTIME_PATH L"Support\\oculus-runtime\\"
+
+      if ((baseDirLength > 0) &&
+          (baseDirLength + _countof(OVR_RUNTIME_PATH) < _countof(oculusInstallDir))) {
+        baseDirLength =
+            OVR_wstrlcat(oculusInstallDir, OVR_RUNTIME_PATH, _countof(oculusInstallDir));
+      }
     }
 #else
     // Example value: /dev/OculusSDK/Main/LibOVR/Mac/Debug/
@@ -700,26 +391,18 @@ static ModuleHandleType OVR_FindLibraryPath(
   {
     size_t i;
 
-#if !defined(_WIN32)
-    FilePathCharType cwDir[OVR_MAX_PATH]; // Will be filled in below.
-    FilePathCharType appDir[OVR_MAX_PATH];
-    OVR_GetCurrentWorkingDirectory(cwDir, sizeof(cwDir) / sizeof(cwDir[0]));
-    OVR_GetCurrentApplicationDirectory(appDir, sizeof(appDir) / sizeof(appDir[0]), ovrTrue, NULL);
-#endif
-
 #if defined(_WIN32)
-    // On Windows, only search the developer directory and the usual path
+    // On Windows, only search the developer directory and the install path
     const FilePathCharType* directoryArray[2];
-    directoryArray[0] = developerDir; // Developer directory.
-    directoryArray[1] = L""; // No directory, which causes Windows to use the standard search
-    // strategy to find the DLL.
+    directoryArray[0] = developerDir[0] != '\0' ? developerDir : NULL; // Developer directory
+    directoryArray[1] = oculusInstallDir;
 
 #elif defined(__APPLE__)
     // https://developer.apple.com/library/mac/documentation/Darwin/Reference/ManPages/man1/dyld.1.html
 
     FilePathCharType homeDir[OVR_MAX_PATH];
     FilePathCharType homeFrameworkDir[OVR_MAX_PATH];
-    const FilePathCharType* directoryArray[5];
+    const FilePathCharType* directoryArray[3];
     size_t homeDirLength = 0;
 
     const char* pHome = getenv("HOME"); // Try getting the HOME environment variable.
@@ -749,27 +432,15 @@ static ModuleHandleType OVR_FindLibraryPath(
       homeFrameworkDir[0] = '\0';
     }
 
-    directoryArray[0] = cwDir;
-    directoryArray[1] = appDir;
-    directoryArray[2] = homeFrameworkDir; // ~/Library/Frameworks/
-    directoryArray[3] = "/Library/Frameworks/"; // DYLD_FALLBACK_FRAMEWORK_PATH
-    directoryArray[4] = developerDir; // Developer directory.
+    directoryArray[0] = developerDir[0] != '\0' ? developerDir : NULL; // Developer directory.
+    directoryArray[1] = homeFrameworkDir; // ~/Library/Frameworks/
+    directoryArray[2] = "/Library/Frameworks/"; // DYLD_FALLBACK_FRAMEWORK_PATH
 
 #else
-#define STR1(x) #x
-#define STR(x) STR1(x)
-#ifdef LIBDIR
-#define TEST_LIB_DIR STR(LIBDIR) "/"
-#else
-#define TEST_LIB_DIR appDir
-#endif
-
-    const FilePathCharType* directoryArray[5];
-    directoryArray[0] = cwDir;
-    directoryArray[1] = TEST_LIB_DIR; // Directory specified by LIBDIR if defined.
-    directoryArray[2] = developerDir; // Developer directory.
-    directoryArray[3] = "/usr/local/lib/";
-    directoryArray[4] = "/usr/lib/";
+    const FilePathCharType* directoryArray[3];
+    directoryArray[0] = developerDir[0] != '\0' ? developerDir : NULL; // Developer directory.
+    directoryArray[1] = "/usr/local/lib/";
+    directoryArray[2] = "/usr/lib/";
 #endif
 
     // Versioned file expectations.
@@ -814,37 +485,23 @@ static ModuleHandleType OVR_FindLibraryPath(
     // essentially the product version).
 
     for (i = 0; i < sizeof(directoryArray) / sizeof(directoryArray[0]); ++i) {
+      if (directoryArray[i] != NULL) {
 #if defined(_WIN32)
-      int printfResult = swprintf(
-          libraryPath,
-          libraryPathCapacity,
-          L"%lsLibOVRRT%hs_%d.dll",
-          directoryArray[i],
-          pBitDepth,
-          requestedMajorVersion);
-
-      if (*directoryArray[i] == 0) {
-        int k;
-        FilePathCharType foundPath[MAX_PATH] = {0};
-        DWORD searchResult = SearchPathW(NULL, libraryPath, NULL, MAX_PATH, foundPath, NULL);
-        if (searchResult <= 0 || searchResult >= libraryPathCapacity) {
-          continue;
-        }
-        foundPath[MAX_PATH - 1] = 0;
-        for (k = 0; k < MAX_PATH; ++k) {
-          libraryPath[k] = foundPath[k];
-        }
-      }
-
+        int printfResult = swprintf(
+            libraryPath,
+            libraryPathCapacity,
+            L"%lsLibOVRRT%hs_%d.dll",
+            directoryArray[i],
+            pBitDepth,
+            requestedMajorVersion);
 #elif defined(__APPLE__)
-      (void)requestedMajorVersion;
-      // https://developer.apple.com/library/mac/documentation/MacOSX/Conceptual/BPFrameworks/Concepts/VersionInformation.html
-      // Macintosh application bundles have the option of embedding dependent frameworks within the
-      // application
-      // bundle itself. A problem with that is that it doesn't support vendor-supplied updates to
-      // the framework.
-      int printfResult =
-          snprintf(libraryPath, libraryPathCapacity, "%sLibOVRRT.dylib", directoryArray[i]);
+        (void)requestedMajorVersion;
+        // https://developer.apple.com/library/mac/documentation/MacOSX/Conceptual/BPFrameworks/Concepts/VersionInformation.html
+        // Macintosh application bundles have the option of embedding dependent frameworks within
+        // the application bundle itself. A problem with that is that it doesn't support
+        // vendor-supplied updates to the framework.
+        int printfResult =
+            snprintf(libraryPath, libraryPathCapacity, "%sLibOVRRT.dylib", directoryArray[i]);
 
 #else // Unix
       // Applications that depend on the OS (e.g. ld-linux / ldd) can rely on the library being in a
@@ -856,19 +513,20 @@ static ModuleHandleType OVR_FindLibraryPath(
       // depend on LD_LIBRARY_PATH be globally modified, partly due to potentialy security issues.
       // Currently we check the current application directory, current working directory, and then
       // /usr/lib and possibly others.
-      int printfResult = snprintf(
-          libraryPath,
-          libraryPathCapacity,
-          "%slibOVRRT%s.so.%d",
-          directoryArray[i],
-          pBitDepth,
-          requestedMajorVersion);
+        int printfResult = snprintf(
+            libraryPath,
+            libraryPathCapacity,
+            "%slibOVRRT%s.so.%d",
+            directoryArray[i],
+            pBitDepth,
+            requestedMajorVersion);
 #endif
 
-      if ((printfResult >= 0) && (printfResult < (int)libraryPathCapacity)) {
-        moduleHandle = OVR_OpenLibrary(libraryPath, result);
-        if (moduleHandle != ModuleHandleTypeNull)
-          return moduleHandle;
+        if ((printfResult >= 0) && (printfResult < (int)libraryPathCapacity)) {
+          moduleHandle = OVR_OpenLibrary(libraryPath, result);
+          if (moduleHandle != ModuleHandleTypeNull)
+            return moduleHandle;
+        }
       }
     }
   }
@@ -921,8 +579,9 @@ static void OVR_UnloadSharedLibrary() {
 }
 
 // Don't put this on the heap
-static ovrErrorInfo LastInitializeErrorInfo = {ovrError_NotInitialized,
-                                               "ovr_Initialize never called"};
+static ovrErrorInfo LastInitializeErrorInfo = {
+    ovrError_NotInitialized,
+    "ovr_Initialize never called"};
 
 static ovrResult OVR_LoadSharedLibrary(int requestedProductVersion, int requestedMajorVersion) {
   FilePathCharType filePath[OVR_MAX_PATH];
@@ -1346,6 +1005,7 @@ ovr_GetControllerVibrationState(
 
   return API.ovr_GetControllerVibrationState.Ptr(session, controllerType, outState);
 }
+
 
 
 OVR_PUBLIC_FUNCTION(ovrResult)
@@ -1956,6 +1616,3 @@ ovr_SetExternalCameraProperties(
 
   return API.ovr_SetExternalCameraProperties.Ptr(session, name, intrinsics, extrinsics);
 }
-#if defined(_MSC_VER)
-#pragma warning(pop)
-#endif
