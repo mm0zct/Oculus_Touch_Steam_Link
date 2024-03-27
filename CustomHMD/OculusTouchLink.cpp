@@ -337,11 +337,20 @@ EVRInitError CServerDriver_OVRTL::Init(vr::IVRDriverContext* pDriverContext)
 #else
         ovrInitParams initParams = { ovrInit_RequestVersion | ovrInit_FocusAware | ovrInit_Invisible, OVR_MINOR_VERSION, NULL, 0, 0 };
 #endif
+
         if (OVR_FAILURE(ovr_Initialize(&initParams)))
+        {
+            ovrErrorInfo err;
+            ovr_GetLastErrorInfo(&err);
+            log_to_buffer("ovr_Initialize Failed! " + std::string(err.ErrorString));
             return VRInitError_Init_Internal;
+        }
 
         if (OVR_FAILURE(ovr_Create(&mSession, &luid)))
+        {
+            log_to_buffer("ovr_Create Failed!");
             return VRInitError_Init_Internal;
+        }
 
 #if DRAW_FRAME
         if (!DIRECTX.InitWindow(0/*hinst*/, L"GuardianSystemDemo")) {
