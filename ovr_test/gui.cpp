@@ -83,9 +83,14 @@ init_prototype default_init = [](config_window_object* self, HWND parent, shared
 
 std::vector<config_window_object> config_windows = { 
 
-   {L"Render In Headset",L"BUTTON", WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_FLAT | BS_TEXT | BS_CHECKBOX, 
-   default_wm_command,  [](config_window_object* self, HWND parent, shared_buffer* comm_buffer) {
-        self->parent = parent;
+   {L"Render In Headset (Applies on restart)",L"BUTTON", WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_FLAT | BS_TEXT | BS_CHECKBOX, 
+   [](HWND window, WPARAM wp, LPARAM lp, shared_buffer* comm_buffer) {
+        BOOL checked = IsDlgButtonChecked(window, wp);
+        comm_buffer->config.do_rendering = !checked;
+        CheckDlgButton(window, wp, checked ? BST_UNCHECKED : BST_CHECKED);
+        return;
+    }, [](config_window_object* self, HWND parent, shared_buffer* comm_buffer) {
+         self->parent = parent;
         CheckDlgButton(parent, self->id.get_id(), comm_buffer->config.do_rendering ? BST_CHECKED : BST_UNCHECKED);
         return;
     } }
