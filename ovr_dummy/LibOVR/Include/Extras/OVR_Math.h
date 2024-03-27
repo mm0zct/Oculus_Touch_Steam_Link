@@ -2327,13 +2327,14 @@ class Pose {
       "(sizeof(T) == sizeof(double) || sizeof(T) == sizeof(float))");
 
   void ToArray(T* arr) const {
-    T temp[7] = {Rotation.x,
-                 Rotation.y,
-                 Rotation.z,
-                 Rotation.w,
-                 Translation.x,
-                 Translation.y,
-                 Translation.z};
+    T temp[7] = {
+        Rotation.x,
+        Rotation.y,
+        Rotation.z,
+        Rotation.w,
+        Translation.x,
+        Translation.y,
+        Translation.z};
     for (int i = 0; i < 7; i++)
       arr[i] = temp[i];
   }
@@ -3414,6 +3415,9 @@ class Matrix3 {
         M[i][j] += b.M[i][j];
     return *this;
   }
+
+  // FIXME(T87508049): create a proper copy constructor
+  Matrix3(const Matrix3& b) = default;
 
   void operator=(const Matrix3& b) {
     for (int i = 0; i < 3; i++)

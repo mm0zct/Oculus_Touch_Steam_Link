@@ -378,13 +378,8 @@ typedef struct OVR_ALIGNAS(4) ovrFovPort_ {
 // ***** HMD Types
 
 /// Enumerates all HMD types that we support.
-///
-/// The currently released developer kits are ovrHmd_DK1 and ovrHmd_DK2.
-/// The other enumerations are for internal use only.
 typedef enum ovrHmdType_ {
   ovrHmd_None = 0,
-  ovrHmd_DK1 = 3,
-  ovrHmd_DKHD = 4,
   ovrHmd_DK2 = 6,
   ovrHmd_CB = 8,
   ovrHmd_Other = 9,
@@ -1369,9 +1364,9 @@ typedef struct ovrInputState_ {
 
   /// Left and right finger trigger values (ovrHand_Left and ovrHand_Right), in range 0.0 to 1.0f.
   /// No deadzone or filter
-  /// This has been formally named "Grip Button". We retain the name HandTrigger for backwards code
-  /// compatibility.
-  /// User-facing documentation should refer to it as the Grip Button or simply Grip.
+  /// This has been formally named simply "Trigger". We retain the name IndexTrigger for backwards
+  /// code compatibility.
+  /// User-facing documentation should refer to it as the Trigger.
   float IndexTriggerRaw[ovrHand_Count];
 
   /// Left and right hand trigger values (ovrHand_Left and ovrHand_Right), in the range 0.0 to 1.0f.
@@ -1387,6 +1382,7 @@ typedef struct ovrInputState_ {
   ovrVector2f ThumbstickRaw[ovrHand_Count];
 
 } ovrInputState;
+
 
 
 typedef struct ovrCameraIntrinsics_ {
@@ -2212,6 +2208,7 @@ ovr_GetControllerVibrationState(
     ovrSession session,
     ovrControllerType controllerType,
     ovrHapticsPlaybackState* outState);
+
 
 
 /// Tests collision/proximity of position tracked devices (e.g. HMD and/or Touch) against the
