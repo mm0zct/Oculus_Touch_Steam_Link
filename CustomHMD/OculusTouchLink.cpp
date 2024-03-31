@@ -330,7 +330,7 @@ EVRInitError CServerDriver_OVRTL::Init(vr::IVRDriverContext* pDriverContext)
 #endif
 
 
-    if (!mSession) {
+    if ((!comm_buffer->config.external_tracking) && !mSession) {
 #if DRAW_FRAME
         ovrInitParams initParams = { ovrInit_RequestVersion, OVR_MINOR_VERSION, NULL, 0, 0 };
 
@@ -436,8 +436,10 @@ void CServerDriver_OVRTL::Cleanup()
     for (CTouchTrackerDriver* t : trackers) delete t;
     trackers.clear();
 #endif
-    ovr_Destroy(mSession);
-    ovr_Shutdown();
+    if (mSession) {
+        ovr_Destroy(mSession);
+        ovr_Shutdown();
+    }
 #if USE_SHARE_MEM_BUFFER
     UnmapViewOfFile(comm_buffer);
 

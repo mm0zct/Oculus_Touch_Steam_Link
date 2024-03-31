@@ -113,7 +113,12 @@ public:                                                                         
             vr::VRProperties()->SetStringProperty(m_ulPropertyContainer, vr::Prop_NamedIconPathDeviceStandbyAlert_String, (!isRightHand) ? "{oculus}/icons/cv1_left_controller_standby.png" : "{oculus}/icons/cv1_right_controller_standby.png");
 
 
-            ovrHmdDesc hmd_desc = ovr_GetHmdDesc(mSession);
+            ovrHmdDesc hmd_desc;
+            if ((!comm_buffer->config.external_tracking) && mSession) {
+                hmd_desc = ovr_GetHmdDesc(mSession);
+            } else {
+                hmd_desc.Type = ovrHmd_CV1;
+            }
             switch (hmd_desc.Type)
             {
             case ovrHmd_CV1:
@@ -301,14 +306,17 @@ public:                                                                         
         ovrTrackingState ss;
         if (comm_buffer->config.external_tracking) {
             ss = comm_buffer->tracking_state;
-        }
-        else {
+        } else if (mSession) {
             ss = ovr_GetTrackingState(mSession,
                 (ovr_GetTimeInSeconds() + (comm_buffer->config.extra_prediction_ms * 0.001)),
                 ovrTrue);
+        } else {
+            // error, we switched from external tracking to in-drver tracking
+            ss.StatusFlags = 0;
         }
-        m_time_of_last_pose = ovr_GetTimeInSeconds();// ss.HandPoses[isRightHand].TimeInSeconds;
-        float delta_t = (comm_buffer->config.extra_prediction_ms * 0.001f) + (ovr_GetTimeInSeconds() - ss.HandPoses[isRightHand].TimeInSeconds);
+     
+        //m_time_of_last_pose = ovr_GetTimeInSeconds();// ss.HandPoses[isRightHand].TimeInSeconds;
+        //float delta_t = (comm_buffer->config.extra_prediction_ms * 0.001f) + (ovr_GetTimeInSeconds() - ss.HandPoses[isRightHand].TimeInSeconds);
         DriverPose_t pose = { 0 };
         pose.poseIsValid = true;
         pose.result = TrackingResult_Running_OK;

@@ -119,10 +119,11 @@ public:
         ovrTrackingState ss;
         if (comm_buffer->config.external_tracking) {
             ss = comm_buffer->tracking_state;
-        }
-        else {
+        } else if(mSession){
             ss = ovr_GetTrackingState(mSession, (ovr_GetTimeInSeconds() + (comm_buffer->config.extra_prediction_ms * 0.001)),
                 ovrTrue);
+        } else {
+            // error, we switched from external tracking to in-driver tracking which is no longer possible
         }
         ovr_pose = ss.HeadPose;
         DriverPose_t pose = { 0 };
