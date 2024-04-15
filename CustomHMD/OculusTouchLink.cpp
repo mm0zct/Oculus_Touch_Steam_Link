@@ -372,22 +372,7 @@ EVRInitError CServerDriver_OVRTL::Init(vr::IVRDriverContext* pDriverContext)
     }
 #endif
 #if CREATE_CONTROLLERS
-    if (0/*comm_buffer->be_objects*/) {
-        if (1/*ovr_GetConnectedControllerTypes(mSession)  & ovrTrackedDevice_LTouch*/) {
-            log_to_buffer("Creating left controller tracker");
-            trackers.push_back(new CTouchTrackerDriver(mSession, ovrTrackedDevice_LTouch, false));
-            vr::VRServerDriverHost()->TrackedDeviceAdded(trackers.back()->GetSerialNumber().c_str(), vr::TrackedDeviceClass_GenericTracker, trackers.back());
-            log_to_buffer("Created left controller tracker");
-        }
-        log_to_buffer(std::to_string(ovr_GetConnectedControllerTypes(mSession)));
-        if (1/*ovr_GetConnectedControllerTypes(mSession) & ovrTrackedDevice_RTouch*/) {
-            log_to_buffer("Creating right controller tracker");
-            trackers.push_back(new CTouchTrackerDriver(mSession, ovrTrackedDevice_RTouch, true));
-            vr::VRServerDriverHost()->TrackedDeviceAdded(trackers.back()->GetSerialNumber().c_str(), vr::TrackedDeviceClass_GenericTracker, trackers.back());
-            log_to_buffer("Created right controller tracker");
-        }
-    }
-    else {
+    if(!comm_buffer->config.disable_controllers){
         m_pLController = new CTouchControllerDriver(mSession, false/*, overall_offset, overall_rotation*/);
         vr::VRServerDriverHost()->TrackedDeviceAdded(m_pLController->GetSerialNumber().c_str(), vr::TrackedDeviceClass_Controller, m_pLController);
 

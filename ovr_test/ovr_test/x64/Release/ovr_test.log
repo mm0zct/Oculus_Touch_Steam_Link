@@ -1,44 +1,17 @@
-﻿  gui.cpp
-C:\Users\the_c\GitHub\Oculus_Touch_Steam_Link\ovr_test\gui.cpp(88,51): warning C4244: 'argument': conversion from 'WPARAM' to 'int', possible loss of data
-C:\Users\the_c\GitHub\Oculus_Touch_Steam_Link\ovr_test\gui.cpp(90,32): warning C4244: 'argument': conversion from 'WPARAM' to 'int', possible loss of data
-C:\Users\the_c\GitHub\Oculus_Touch_Steam_Link\ovr_test\gui.cpp(99,51): warning C4244: 'argument': conversion from 'WPARAM' to 'int', possible loss of data
-C:\Users\the_c\GitHub\Oculus_Touch_Steam_Link\ovr_test\gui.cpp(101,32): warning C4244: 'argument': conversion from 'WPARAM' to 'int', possible loss of data
-C:\Users\the_c\GitHub\Oculus_Touch_Steam_Link\ovr_test\gui.cpp(110,51): warning C4244: 'argument': conversion from 'WPARAM' to 'int', possible loss of data
-C:\Users\the_c\GitHub\Oculus_Touch_Steam_Link\ovr_test\gui.cpp(112,32): warning C4244: 'argument': conversion from 'WPARAM' to 'int', possible loss of data
-C:\Users\the_c\GitHub\Oculus_Touch_Steam_Link\ovr_test\gui.cpp(121,51): warning C4244: 'argument': conversion from 'WPARAM' to 'int', possible loss of data
-C:\Users\the_c\GitHub\Oculus_Touch_Steam_Link\ovr_test\gui.cpp(123,32): warning C4244: 'argument': conversion from 'WPARAM' to 'int', possible loss of data
-C:\Users\the_c\GitHub\Oculus_Touch_Steam_Link\ovr_test\gui.cpp(231,63): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-C:\Users\the_c\GitHub\Oculus_Touch_Steam_Link\ovr_test\gui.cpp(270,59): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-C:\Users\the_c\GitHub\Oculus_Touch_Steam_Link\ovr_test\gui.cpp(310,57): warning C4244: '=': conversion from 'long' to 'uint8_t', possible loss of data
-C:\Users\the_c\GitHub\Oculus_Touch_Steam_Link\ovr_test\gui.cpp(325,51): warning C4244: 'argument': conversion from 'WPARAM' to 'int', possible loss of data
-C:\Users\the_c\GitHub\Oculus_Touch_Steam_Link\ovr_test\gui.cpp(327,32): warning C4244: 'argument': conversion from 'WPARAM' to 'int', possible loss of data
-C:\Users\the_c\GitHub\Oculus_Touch_Steam_Link\ovr_test\gui.cpp(336,51): warning C4244: 'argument': conversion from 'WPARAM' to 'int', possible loss of data
-C:\Users\the_c\GitHub\Oculus_Touch_Steam_Link\ovr_test\gui.cpp(338,32): warning C4244: 'argument': conversion from 'WPARAM' to 'int', possible loss of data
-C:\Users\the_c\GitHub\Oculus_Touch_Steam_Link\ovr_test\gui.cpp(347,51): warning C4244: 'argument': conversion from 'WPARAM' to 'int', possible loss of data
-C:\Users\the_c\GitHub\Oculus_Touch_Steam_Link\ovr_test\gui.cpp(349,32): warning C4244: 'argument': conversion from 'WPARAM' to 'int', possible loss of data
-C:\Users\the_c\GitHub\Oculus_Touch_Steam_Link\ovr_test\gui.cpp(528,73): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-C:\Users\the_c\GitHub\Oculus_Touch_Steam_Link\ovr_test\gui.cpp(529,73): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-C:\Users\the_c\GitHub\Oculus_Touch_Steam_Link\ovr_test\gui.cpp(530,74): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-C:\Users\the_c\GitHub\Oculus_Touch_Steam_Link\ovr_test\gui.cpp(533,73): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-C:\Users\the_c\GitHub\Oculus_Touch_Steam_Link\ovr_test\gui.cpp(534,73): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-C:\Users\the_c\GitHub\Oculus_Touch_Steam_Link\ovr_test\gui.cpp(535,74): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-C:\Users\the_c\GitHub\Oculus_Touch_Steam_Link\ovr_test\gui.cpp(616,61): warning C4312: 'type cast': conversion from 'uint32_t' to 'HMENU' of greater size
-  HeadsetRender.cpp
-C:\Users\the_c\GitHub\Oculus_Touch_Steam_Link\ovr_test\HeadsetRender.cpp(118,23): warning C4018: '<': signed/unsigned mismatch
-  ovr_test.cpp
+﻿  ovr_test.cpp
 C:\Users\the_c\GitHub\Oculus_Touch_Steam_Link\ovr_test\ovr_test.cpp(46,23): warning C4018: '<': signed/unsigned mismatch
 C:\Users\the_c\GitHub\Oculus_Touch_Steam_Link\ovr_test\ovr_test.cpp(210,23): warning C4018: '<': signed/unsigned mismatch
-C:\Users\the_c\GitHub\Oculus_Touch_Steam_Link\ovr_test\ovr_test.cpp(431,55): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-C:\Users\the_c\GitHub\Oculus_Touch_Steam_Link\ovr_test\ovr_test.cpp(435,52): warning C4244: '=': conversion from 'unsigned long' to 'uint8_t', possible loss of data
-C:\Users\the_c\GitHub\Oculus_Touch_Steam_Link\ovr_test\ovr_test.cpp(533,23): warning C4018: '<': signed/unsigned mismatch
-C:\Users\the_c\GitHub\Oculus_Touch_Steam_Link\ovr_test\ovr_test.cpp(537,90): warning C4244: 'argument': conversion from 'uint64_t' to 'uint32_t', possible loss of data
-C:\Users\the_c\GitHub\Oculus_Touch_Steam_Link\ovr_test\ovr_test.cpp(545,28): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
-C:\Users\the_c\GitHub\Oculus_Touch_Steam_Link\ovr_test\ovr_test.cpp(546,39): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
-C:\Users\the_c\GitHub\Oculus_Touch_Steam_Link\ovr_test\ovr_test.cpp(569,33): warning C4244: 'initializing': conversion from 'float' to 'uint32_t', possible loss of data
-C:\Users\the_c\GitHub\Oculus_Touch_Steam_Link\ovr_test\ovr_test.cpp(574,24): warning C4244: '=': conversion from 'float' to 'uint32_t', possible loss of data
+C:\Users\the_c\GitHub\Oculus_Touch_Steam_Link\ovr_test\ovr_test.cpp(435,55): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+C:\Users\the_c\GitHub\Oculus_Touch_Steam_Link\ovr_test\ovr_test.cpp(439,52): warning C4244: '=': conversion from 'unsigned long' to 'uint8_t', possible loss of data
+C:\Users\the_c\GitHub\Oculus_Touch_Steam_Link\ovr_test\ovr_test.cpp(537,23): warning C4018: '<': signed/unsigned mismatch
+C:\Users\the_c\GitHub\Oculus_Touch_Steam_Link\ovr_test\ovr_test.cpp(541,90): warning C4244: 'argument': conversion from 'uint64_t' to 'uint32_t', possible loss of data
+C:\Users\the_c\GitHub\Oculus_Touch_Steam_Link\ovr_test\ovr_test.cpp(549,28): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+C:\Users\the_c\GitHub\Oculus_Touch_Steam_Link\ovr_test\ovr_test.cpp(550,39): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+C:\Users\the_c\GitHub\Oculus_Touch_Steam_Link\ovr_test\ovr_test.cpp(573,33): warning C4244: 'initializing': conversion from 'float' to 'uint32_t', possible loss of data
+C:\Users\the_c\GitHub\Oculus_Touch_Steam_Link\ovr_test\ovr_test.cpp(578,24): warning C4244: '=': conversion from 'float' to 'uint32_t', possible loss of data
   Generating code
-  Previous IPDB not found, fall back to full compilation.
-C:\Users\the_c\GitHub\Oculus_Touch_Steam_Link\ovr_test\gui.cpp(665): warning C4715: 'GUI_Manager::GUIWndProc': not all control paths return a value
-  All 1345 functions were compiled because no usable IPDB/IOBJ from previous compilation was found.
+  1 of 1379 functions (<0.1%) were compiled, the rest were copied from previous compilation.
+    0 functions were new in current compilation
+    2 functions had inline decision re-evaluated but remain unchanged
   Finished generating code
   ovr_test.vcxproj -> C:\Users\the_c\GitHub\Oculus_Touch_Steam_Link\ovr_test\x64\Release\ovr_test.exe

@@ -127,6 +127,17 @@ std::vector<config_window_object> config_windows = {
         CheckDlgButton(parent, self->id.get_id(), comm_buffer->config.track_hmd ? BST_CHECKED : BST_UNCHECKED);
         return;
     } }
+,  {L"Disable Controllers",L"BUTTON", WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_FLAT | BS_TEXT | BS_CHECKBOX,
+    [](HWND window, WPARAM wp, LPARAM lp, shared_buffer* comm_buffer) {
+        BOOL checked = IsDlgButtonChecked(window, wp);
+        comm_buffer->config.disable_controllers = !checked;
+        CheckDlgButton(window, wp, checked ? BST_UNCHECKED : BST_CHECKED);
+        return;
+    }, [](config_window_object* self, HWND parent, shared_buffer* comm_buffer) {
+        self->parent = parent;
+        CheckDlgButton(parent, self->id.get_id(), comm_buffer->config.disable_controllers ? BST_CHECKED : BST_UNCHECKED);
+        return;
+    } }
 ,  {L"Universe ID",L"EDIT", WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_FLAT | BS_TEXT | ES_READONLY,
     default_wm_command, default_init }
 ,  {L"31",L"EDIT", WS_VISIBLE | WS_CHILD | ES_NUMBER,
@@ -567,9 +578,9 @@ GUI_Manager::GUI_Manager(shared_buffer* comm_buffer)
     0, L"MyWindowsApp", LoadIcon(0,IDI_APPLICATION) };
     if (RegisterClassEx(&wndclass))
     {
-        window = CreateWindowEx(0, L"MyWindowsApp", L"title",
+        window = CreateWindowEx(0, L"MyWindowsApp", L"OculusTouchlink Configuration",
             WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT,
-            800, 600, 0, 0, GetModuleHandle(0), 0);
+            600, 630, 0, 0, GetModuleHandle(0), 0);
 
     }
 

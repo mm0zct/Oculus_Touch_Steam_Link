@@ -3,14 +3,26 @@
   "WorkspaceRootPath": "C:\\Users\\the_c\\GitHub\\Oculus_Touch_Steam_Link\\ovr_test\\",
   "Documents": [
     {
+      "AbsoluteMoniker": "D:0:0:{9A88E3BC-736C-4392-A864-AF691CC7334B}|ovr_test.vcxproj|C:\\Users\\the_c\\GitHub\\Oculus_Touch_Steam_Link\\ovr_test\\ovr_test.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{9A88E3BC-736C-4392-A864-AF691CC7334B}|ovr_test.vcxproj|solutionrelative:ovr_test.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{9A88E3BC-736C-4392-A864-AF691CC7334B}|ovr_test.vcxproj|C:\\Users\\the_c\\GitHub\\Oculus_Touch_Steam_Link\\ovr_test\\gui.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{9A88E3BC-736C-4392-A864-AF691CC7334B}|ovr_test.vcxproj|solutionrelative:gui.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{9A88E3BC-736C-4392-A864-AF691CC7334B}|ovr_test.vcxproj|C:\\Users\\the_c\\GitHub\\Oculus_Touch_Steam_Link\\ovr_test\\definitions.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{9A88E3BC-736C-4392-A864-AF691CC7334B}|ovr_test.vcxproj|solutionrelative:definitions.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\the_c\\GitHub\\Oculus_Touch_Steam_Link\\ovr_dummy\\LibOVR\\Include\\OVR_Version.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{9A88E3BC-736C-4392-A864-AF691CC7334B}|ovr_test.vcxproj|C:\\USERS\\THE_C\\GITHUB\\OCULUS_TOUCH_STEAM_LINK\\OVR_TEST\\LIBOVR\\INCLUDE\\OVR_VERSION.H||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
-      "RelativeMoniker": "D:0:0:{9A88E3BC-736C-4392-A864-AF691CC7334B}|ovr_test.vcxproj|solutionrelative:LIBOVR\\INCLUDE\\OVR_VERSION.H||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\the_c\\GitHub\\Oculus_Touch_Steam_Link\\CustomHMD\\LibOVR\\Include\\OVR_Version.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\the_c\\GitHub\\Oculus_Touch_Steam_Link\\CustomHMD\\LibOVR\\Include\\OVR_Version.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\the_c\\GitHub\\Oculus_Touch_Steam_Link\\ovr_test\\LibOVR\\Include\\OVR_Version.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:LibOVR\\Include\\OVR_Version.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
     }
   ],
   "DocumentGroupContainers": [
@@ -25,6 +37,45 @@
             {
               "$type": "Document",
               "DocumentIndex": 0,
+              "Title": "ovr_test.cpp",
+              "DocumentMoniker": "C:\\Users\\the_c\\GitHub\\Oculus_Touch_Steam_Link\\ovr_test\\ovr_test.cpp",
+              "RelativeDocumentMoniker": "ovr_test.cpp",
+              "ToolTip": "C:\\Users\\the_c\\GitHub\\Oculus_Touch_Steam_Link\\ovr_test\\ovr_test.cpp",
+              "RelativeToolTip": "ovr_test.cpp",
+              "ViewState": "AQIAAOUAAAAAAAAAAAAkwOoAAAAbAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
+              "WhenOpened": "2024-04-15T21:54:09.224Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "gui.cpp",
+              "DocumentMoniker": "C:\\Users\\the_c\\GitHub\\Oculus_Touch_Steam_Link\\ovr_test\\gui.cpp",
+              "RelativeDocumentMoniker": "gui.cpp",
+              "ToolTip": "C:\\Users\\the_c\\GitHub\\Oculus_Touch_Steam_Link\\ovr_test\\gui.cpp",
+              "RelativeToolTip": "gui.cpp",
+              "ViewState": "AQIAADECAAAAAAAAAAAAAEQCAABTAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
+              "WhenOpened": "2024-04-15T21:52:51.732Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "definitions.h",
+              "DocumentMoniker": "C:\\Users\\the_c\\GitHub\\Oculus_Touch_Steam_Link\\ovr_test\\definitions.h",
+              "RelativeDocumentMoniker": "definitions.h",
+              "ToolTip": "C:\\Users\\the_c\\GitHub\\Oculus_Touch_Steam_Link\\ovr_test\\definitions.h",
+              "RelativeToolTip": "definitions.h",
+              "ViewState": "AQIAAAYAAAAAAAAAAAAAACAAAAASAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
+              "WhenOpened": "2024-04-15T21:52:24.244Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
               "Title": "OVR_Version.h",
               "DocumentMoniker": "C:\\Users\\the_c\\GitHub\\Oculus_Touch_Steam_Link\\ovr_dummy\\LibOVR\\Include\\OVR_Version.h",
               "RelativeDocumentMoniker": "..\\ovr_dummy\\LibOVR\\Include\\OVR_Version.h",
@@ -37,7 +88,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 5,
               "Title": "OVR_Version.h",
               "DocumentMoniker": "C:\\Users\\the_c\\GitHub\\Oculus_Touch_Steam_Link\\ovr_test\\LibOVR\\Include\\OVR_Version.h",
               "RelativeDocumentMoniker": "LibOVR\\Include\\OVR_Version.h",
@@ -45,12 +96,11 @@
               "RelativeToolTip": "LibOVR\\Include\\OVR_Version.h",
               "ViewState": "AQIAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
-              "WhenOpened": "2024-03-28T22:43:13.211Z",
-              "EditorCaption": ""
+              "WhenOpened": "2024-03-28T22:43:13.211Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 4,
               "Title": "OVR_Version.h",
               "DocumentMoniker": "C:\\Users\\the_c\\GitHub\\Oculus_Touch_Steam_Link\\CustomHMD\\LibOVR\\Include\\OVR_Version.h",
               "RelativeDocumentMoniker": "..\\CustomHMD\\LibOVR\\Include\\OVR_Version.h",
@@ -58,12 +108,7 @@
               "RelativeToolTip": "..\\CustomHMD\\LibOVR\\Include\\OVR_Version.h",
               "ViewState": "AQIAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
-              "WhenOpened": "2024-03-28T22:42:55.891Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Bookmark",
-              "Name": "ST:0:0:{cce594b6-0c39-4442-ba28-10c64ac7e89f}"
+              "WhenOpened": "2024-03-28T22:42:55.891Z"
             }
           ]
         }
