@@ -33,7 +33,7 @@ Close oculus home for now.
 
 Unzip the touch-link SteamVR driver from the latest release and copy the whole folder to your steamVR path. The default path is "C:\Program Files (x86)\Steam\steamapps\common\SteamVR\drivers" then open a PowerShell command line and run:
 
-C:\'Program Files (x86)'\Steam\steamapps\common\SteamVR\bin\win64\vrpathreg adddriver C:\'Program Files (x86)'\Steam\steamapps\common\SteamVR\drivers\OculusTouchLink
+`C:\'Program Files (x86)'\Steam\steamapps\common\SteamVR\bin\win64\vrpathreg adddriver C:\'Program Files (x86)'\Steam\steamapps\common\SteamVR\drivers\OculusTouchLink`
 
 (change the path to your own steam/steamVR install path, instead of SteamVR you may have OpenVR if you were very early to the VR scene)
 
