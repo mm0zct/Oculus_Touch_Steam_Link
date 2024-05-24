@@ -38,11 +38,14 @@ Unzip the touch-link SteamVR driver from the latest release and copy the whole f
 (change the path to your own steam/steamVR install path, instead of SteamVR you may have OpenVR if you were very early to the VR scene)
 
 If using WMR: Plug the power back into the HMD (or plug USB back into the PC) and wait for WMR portal to come up and start working. Turn on your WMR controllers.
-If using Quest: connect to your PC via ALVR/Virtual Desktop but do nothing else yet except make sure you have staged tracking on. Proceed to step 9.
-If using Vive or Index: Do nothing yet. Proceed to step 9.
-Start ODTKRA https://github.com/DeltaNeverUsed/ODTKRA , ovr_test.exe and ovr_dummy.exe. Give your oculus HMD a little wiggle for good measure. Pick up an oculus controller and watch the ovr_test.exe console window, make sure the state for the controller turns to 0xf. If it doesn't, move the oculus headset around a bit and make sure a sensor can see it.
 
-Put on your main HMD and start steamVR from its native environment
+If using Quest: connect to your PC via ALVR/Virtual Desktop but do nothing else yet except make sure you have staged tracking on. Proceed to the next step.
+
+If using Vive or Index: Do nothing yet. Proceed to the next step.
+
+Start ODTKRA https://github.com/DeltaNeverUsed/ODTKRA , ovr_test.exe and ovr_dummy.exe. Note: make sure SteamVR isn't running when starting ovr_test.exe. Give your oculus HMD a little wiggle for good measure. Pick up an oculus controller and watch the ovr_test.exe console window, make sure the state for the controller turns to 0xf. If it doesn't, move the oculus headset around a bit and make sure a sensor can see it.
+
+Put on your main HMD and start SteamVR from its native environment.
 
 On the space calibrator screen (either in Vr or on your desktop), the left side should show your native HMD devices and the right side should show your CV1 oculus devices. Both sides have a drop-down menu and sometimes you have to manually pick the universe you want to use from there. Pick a native HMD controller on the left and a CV1 touch controller on the right. You should pick the same ‘hand’ (there’s an ‘identify’ button that makes the controllers you’ve picked vibrate). Click ‘copy chaperone bounds’ on the bottom of the space calibrator menu. NOTE: sometimes the 'wrong' controller wants to be the input in which case you may need to contort yourself a bit to pick everything with the not yet calibrated touch controllers, or just use the desktop with the mouse.
 
