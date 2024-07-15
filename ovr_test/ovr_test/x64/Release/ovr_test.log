@@ -7,10 +7,10 @@ C:\Users\the_c\GitHub\Oculus_Touch_Steam_Link\ovr_test\ovr_test.cpp(537,23): war
 C:\Users\the_c\GitHub\Oculus_Touch_Steam_Link\ovr_test\ovr_test.cpp(541,90): warning C4244: 'argument': conversion from 'uint64_t' to 'uint32_t', possible loss of data
 C:\Users\the_c\GitHub\Oculus_Touch_Steam_Link\ovr_test\ovr_test.cpp(549,28): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
 C:\Users\the_c\GitHub\Oculus_Touch_Steam_Link\ovr_test\ovr_test.cpp(550,39): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
-C:\Users\the_c\GitHub\Oculus_Touch_Steam_Link\ovr_test\ovr_test.cpp(573,33): warning C4244: 'initializing': conversion from 'float' to 'uint32_t', possible loss of data
-C:\Users\the_c\GitHub\Oculus_Touch_Steam_Link\ovr_test\ovr_test.cpp(578,24): warning C4244: '=': conversion from 'float' to 'uint32_t', possible loss of data
+C:\Users\the_c\GitHub\Oculus_Touch_Steam_Link\ovr_test\ovr_test.cpp(574,33): warning C4244: 'initializing': conversion from 'float' to 'uint32_t', possible loss of data
+C:\Users\the_c\GitHub\Oculus_Touch_Steam_Link\ovr_test\ovr_test.cpp(579,24): warning C4244: '=': conversion from 'float' to 'uint32_t', possible loss of data
   Generating code
-  1 of 1379 functions (<0.1%) were compiled, the rest were copied from previous compilation.
+  2 of 1379 functions ( 0.1%) were compiled, the rest were copied from previous compilation.
     0 functions were new in current compilation
     2 functions had inline decision re-evaluated but remain unchanged
   Finished generating code

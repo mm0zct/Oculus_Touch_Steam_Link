@@ -42,7 +42,7 @@
               "RelativeDocumentMoniker": "ovr_test.cpp",
               "ToolTip": "C:\\Users\\the_c\\GitHub\\Oculus_Touch_Steam_Link\\ovr_test\\ovr_test.cpp",
               "RelativeToolTip": "ovr_test.cpp",
-              "ViewState": "AQIAAOUAAAAAAAAAAAAkwOoAAAAbAAAA",
+              "ViewState": "AQIAAC4CAAAAAAAAAAAkwE4CAAAZAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
               "WhenOpened": "2024-04-15T21:54:09.224Z",
               "EditorCaption": ""
@@ -57,8 +57,7 @@
               "RelativeToolTip": "gui.cpp",
               "ViewState": "AQIAADECAAAAAAAAAAAAAEQCAABTAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
-              "WhenOpened": "2024-04-15T21:52:51.732Z",
-              "EditorCaption": ""
+              "WhenOpened": "2024-04-15T21:52:51.732Z"
             },
             {
               "$type": "Document",
@@ -70,8 +69,7 @@
               "RelativeToolTip": "definitions.h",
               "ViewState": "AQIAAAYAAAAAAAAAAAAAACAAAAASAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
-              "WhenOpened": "2024-04-15T21:52:24.244Z",
-              "EditorCaption": ""
+              "WhenOpened": "2024-04-15T21:52:24.244Z"
             },
             {
               "$type": "Document",
@@ -83,8 +81,7 @@
               "RelativeToolTip": "..\\ovr_dummy\\LibOVR\\Include\\OVR_Version.h",
               "ViewState": "AQIAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
-              "WhenOpened": "2024-03-28T22:43:23.544Z",
-              "EditorCaption": ""
+              "WhenOpened": "2024-03-28T22:43:23.544Z"
             },
             {
               "$type": "Document",

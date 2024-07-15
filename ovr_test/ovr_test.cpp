@@ -567,6 +567,7 @@ void add_vibration(bool isRightHand, float frequency, float amplitude, float dur
     //std::cout << " adding haptic for amplitude " << amplitude << " frequency " << frequency << " duration " << duration << std::endl;
 
     if ((amplitude <= 0) || (frequency <= 0) /*|| (duration <= 0)*/) return;
+    if (duration <= 0) duration = 0;
    // if (frequency > 1.0)frequency /= 1000.0;
     float amp = amplitude;
     float freq = frequency;// * 320.0f;
