@@ -35,7 +35,6 @@ limitations under the License.
                : (((dbl) - (double)(int)(dbl)) <= -0.5 ? (int)(dbl) : (int)((dbl)-0.5))
 #endif
 
-
 #if defined(_MSC_VER)
 #include <emmintrin.h>
 #pragma intrinsic(_mm_pause)

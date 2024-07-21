@@ -244,8 +244,9 @@ void reset_config_settings(config_data& config) {
     strncpy_s(comm_buffer->config.manufacturer_name, "Oculus_link", 127);
     strncpy_s(comm_buffer->config.tracking_space_name, "oculus_link", 127);
     comm_buffer->config.num_objects = (ovr_GetConnectedControllerTypes(mSession) >> 8) & 0xf;
-    config.external_tracking = false;
+    config.external_tracking = true;
     config.track_hmd = false;
+    config.disable_controllers = false;
     config.min_amplitude = 64;
     config.amplitude_scale = 1.0;
     config.sqrt_pre_filter = false;
@@ -306,6 +307,7 @@ void save_config_to_file(config_data& config) {
     ofs << config.world_orientation_euler[0] << std::endl;
     ofs << config.world_orientation_euler[1] << std::endl;
     ofs << config.world_orientation_euler[2] << std::endl;
+    ofs << config.disable_controllers << std::endl;
     ofs.close();
 }
 
@@ -355,6 +357,8 @@ void load_config_from_file(config_data& config) {
         ifs >> config.world_orientation_euler[0];
         ifs >> config.world_orientation_euler[1];
         ifs >> config.world_orientation_euler[2];
+
+        ifs >> config.disable_controllers;
         ifs.close();
     }
 }
@@ -563,6 +567,7 @@ void add_vibration(bool isRightHand, float frequency, float amplitude, float dur
     //std::cout << " adding haptic for amplitude " << amplitude << " frequency " << frequency << " duration " << duration << std::endl;
 
     if ((amplitude <= 0) || (frequency <= 0) /*|| (duration <= 0)*/) return;
+    if (duration <= 0) duration = 0;
    // if (frequency > 1.0)frequency /= 1000.0;
     float amp = amplitude;
     float freq = frequency;// * 320.0f;
