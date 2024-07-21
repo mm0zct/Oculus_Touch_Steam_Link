@@ -307,12 +307,22 @@ public:                                                                         
                 (ovr_GetTimeInSeconds() + (comm_buffer->config.extra_prediction_ms * 0.001)),
                 ovrTrue);
         }
+
         m_time_of_last_pose = ovr_GetTimeInSeconds();// ss.HandPoses[isRightHand].TimeInSeconds;
         float delta_t = (comm_buffer->config.extra_prediction_ms * 0.001f) + (ovr_GetTimeInSeconds() - ss.HandPoses[isRightHand].TimeInSeconds);
         DriverPose_t pose = { 0 };
-        pose.poseIsValid = true;
-        pose.result = TrackingResult_Running_OK;
-        pose.deviceIsConnected = true;
+        if(ss.HandStatusFlags[isRightHand] & ovrStatus_PositionValid){
+            pose.result = TrackingResult_Running_OK;
+            pose.poseIsValid = true;
+        } else if (ss.HandStatusFlags[isRightHand] & ovrStatus_OrientationValid) {
+            pose.result = TrackingResult_Fallback_RotationOnly;
+            pose.poseIsValid = true;
+        } else{
+            pose.result = TrackingResult_Running_OutOfRange;
+            pose.poseIsValid = false;
+        }
+        
+        pose.deviceIsConnected = (ss.HandStatusFlags[isRightHand] != 0);
 
         ovrQuatf hand_qoffset = { 0.3420201, 0, 0, 0.9396926 };
         ovrQuatf hand_input = ss.HandPoses[isRightHand].ThePose.Orientation;
