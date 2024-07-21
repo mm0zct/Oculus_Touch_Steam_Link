@@ -137,7 +137,7 @@ public:
         pose.qRotation.z = ovr_pose.ThePose.Orientation.z;
 
         pose.vecPosition[0] = ovr_pose.ThePose.Position.x;
-        pose.vecPosition[1] = ovr_pose.ThePose.Position.y;
+        pose.vecPosition[1] = ovr_pose.ThePose.Position.y + 0.09;
         pose.vecPosition[2] = ovr_pose.ThePose.Position.z;
 
         ovrVector3f linAcc = (ovr_pose.LinearAcceleration);

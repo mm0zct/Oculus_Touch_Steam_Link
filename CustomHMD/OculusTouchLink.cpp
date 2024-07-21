@@ -104,7 +104,13 @@ public:
     virtual void EnterStandby() {}
     virtual void LeaveStandby() {}
 
+
+
 private:
+
+    bool Setup();
+    bool setup_complete = false;
+    //std::thread setup_thread;
     void InitRenderTargets(const ovrHmdDesc& hmdDesc);
     void  Render();
     ovrSession mSession = nullptr;
@@ -268,8 +274,21 @@ ovrQuatf ToQuaternion(double x, double y, double z)
 
 EVRInitError CServerDriver_OVRTL::Init(vr::IVRDriverContext* pDriverContext)
 {
+
+
     VR_INIT_SERVER_DRIVER_CONTEXT(pDriverContext);
     InitDriverLog(vr::VRDriverLog());
+    //setup_thread = std::thread([this, pDriverContext]() {this->Setup(pDriverContext); });
+    return VRInitError_None;
+
+}
+
+
+bool CServerDriver_OVRTL::Setup()
+{
+
+
+
 
 #if EXPERIMENTAL_OFFSET_CALIBRATION
     ovrVector3f overall_offset{ -0.01 * 30.57033738,-0.01 * 46.98443338, 0.01 * 54.50133916 };
@@ -295,11 +314,12 @@ EVRInitError CServerDriver_OVRTL::Init(vr::IVRDriverContext* pDriverContext)
         FILE_MAP_ALL_ACCESS,   // read/write access
         FALSE,                 // do not inherit the name
         L"Local\\oculus_steamvr_touch_controller_data_channel");               // name of mapping object
+    
 #endif
     if (hMapFile == NULL)
     {
         std::cout << "Could not create file mapping object " << GetLastError() << std::endl;
-        return VRInitError_Init_Internal;
+        return false;
     }
     comm_buffer = (shared_buffer*)MapViewOfFile(hMapFile,   // handle to map object
         FILE_MAP_ALL_ACCESS, // read/write permission
@@ -313,7 +333,7 @@ EVRInitError CServerDriver_OVRTL::Init(vr::IVRDriverContext* pDriverContext)
 
         CloseHandle(hMapFile);
 
-        return VRInitError_Init_Internal;
+        return false;
     }
 #endif
 
@@ -325,7 +345,7 @@ EVRInitError CServerDriver_OVRTL::Init(vr::IVRDriverContext* pDriverContext)
     {
         std::cout << "Could notopen mutex" << GetLastError() << std::endl;
 
-        return VRInitError_Init_Internal;
+        return false;
     }
 #endif
 
@@ -343,13 +363,13 @@ EVRInitError CServerDriver_OVRTL::Init(vr::IVRDriverContext* pDriverContext)
             ovrErrorInfo err;
             ovr_GetLastErrorInfo(&err);
             log_to_buffer("ovr_Initialize Failed! " + std::string(err.ErrorString));
-            return VRInitError_Init_Internal;
+            return false;
         }
 
         if (OVR_FAILURE(ovr_Create(&mSession, &luid)))
         {
             log_to_buffer("ovr_Create Failed!");
-            return VRInitError_Init_Internal;
+            return false;
         }
 
 #if DRAW_FRAME
@@ -363,7 +383,7 @@ EVRInitError CServerDriver_OVRTL::Init(vr::IVRDriverContext* pDriverContext)
         InitRenderTargets(hmdDesc);
 #endif
         if (OVR_FAILURE(ovr_SetTrackingOriginType(mSession, ovrTrackingOrigin_FloorLevel)))
-            return VRInitError_Init_Internal;
+            return false;
     }
 #ifdef ADD_HMD
     if (comm_buffer->config.track_hmd) {
@@ -400,7 +420,8 @@ EVRInitError CServerDriver_OVRTL::Init(vr::IVRDriverContext* pDriverContext)
     DIRECTX.HandleMessages();
     Render();
 #endif
-    return VRInitError_None;
+    setup_complete = true;
+    return true;
 }
 
 void CServerDriver_OVRTL::Cleanup()
@@ -438,6 +459,12 @@ void CServerDriver_OVRTL::Cleanup()
 
 void CServerDriver_OVRTL::RunFrame()
 {
+    if (!setup_complete) {
+        vr::VREvent_t vrEvent;
+        while (vr::VRServerDriverHost()->PollNextEvent(&vrEvent, sizeof(vrEvent))); // process all the events
+        if (!Setup()) return;
+    }
+
 #ifdef ADD_HMD
     if (m_pNullHmdLatest)
     {

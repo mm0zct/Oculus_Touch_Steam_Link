@@ -144,6 +144,7 @@ public:                                                                         
         ovrQuatf hand_input = ovr_pose.ThePose.Orientation;
         ovrQuatf hand_result = ovrQuatfmul(hand_input, hand_qoffset);
         ovrVector3f hand_voffset = { 0,0,0 };
+
 #if CORRECT_OBJECT_TRACKING
         if (isRightHand) {
             hand_voffset = rotateVector2(hand_offset, hand_input);
@@ -175,7 +176,7 @@ public:                                                                         
         pose.qRotation.z = ovr_pose.ThePose.Orientation.z;
 
         pose.vecPosition[0] = ovr_pose.ThePose.Position.x;
-        pose.vecPosition[1] = ovr_pose.ThePose.Position.y;
+        pose.vecPosition[1] = ovr_pose.ThePose.Position.y + 0.09;
         pose.vecPosition[2] = ovr_pose.ThePose.Position.z;
 #endif
         ovrVector3f linAcc = (ovr_pose.LinearAcceleration);

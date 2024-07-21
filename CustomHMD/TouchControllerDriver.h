@@ -364,7 +364,7 @@ public:                                                                         
         }
         //position = rotateVector2(position, overall_rotation);
         pose.vecPosition[0] = position.x;// +overall_offset.x;
-        pose.vecPosition[1] = position.y;// +overall_offset.y;
+        pose.vecPosition[1] = position.y + 0.09;// +overall_offset.y;
         pose.vecPosition[2] = position.z;// +overall_offset.z;
 
 

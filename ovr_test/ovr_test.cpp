@@ -48,9 +48,9 @@ void main_loop(ovrSession mSession, HANDLE comm_mutex, shared_buffer* comm_buffe
         ovrPoseStatef ovr_pose;
 
         ovr_GetDevicePoses(mSession, &deviceType, 1, (ovr_GetTimeInSeconds() + (comm_buffer->config.extra_prediction_ms * 0.001)), &ovr_pose);
-        if ((ovr_pose.ThePose.Orientation.x != 0) && (ovr_pose.ThePose.Orientation.y != 0) && (ovr_pose.ThePose.Orientation.z != 0)){
+        //if ((ovr_pose.ThePose.Orientation.x != 0) || (ovr_pose.ThePose.Orientation.y != 0) || (ovr_pose.ThePose.Orientation.z != 0)){
             comm_buffer->object_poses[i] = ovr_pose;
-        }
+        //}
         if ((frame_count & 0x7FF) == 0) {
             std::cout.precision(4);
 
