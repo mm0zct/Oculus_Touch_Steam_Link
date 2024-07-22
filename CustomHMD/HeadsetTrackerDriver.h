@@ -196,8 +196,8 @@ public:
 
     std::string GetSerialNumber() const { log_to_buffer(__func__); return m_sSerialNumber; }
 
-private:
     vr::TrackedDeviceIndex_t m_unObjectId;
+private:
     vr::PropertyContainerHandle_t m_ulPropertyContainer;
 
     std::string m_sSerialNumber;

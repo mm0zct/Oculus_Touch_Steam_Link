@@ -466,20 +466,20 @@ void CServerDriver_OVRTL::RunFrame()
     }
 
 #ifdef ADD_HMD
-    if (m_pNullHmdLatest)
+    if (m_pNullHmdLatest && (m_pNullHmdLatest->m_unObjectId != vr::k_unTrackedDeviceIndexInvalid))
     {
         m_pNullHmdLatest->RunFrame();
     }
 #endif
-    if (m_pLController)
+    if (m_pLController && (m_pLController->m_unObjectId != vr::k_unTrackedDeviceIndexInvalid))
     {
         m_pLController->RunFrame();
     }
-    if (m_pRController)
+    if (m_pRController && (m_pRController->m_unObjectId != vr::k_unTrackedDeviceIndexInvalid))
     {
         m_pRController->RunFrame();
     }
-    for (CTouchTrackerDriver* t : trackers) t->RunFrame();
+    for (CTouchTrackerDriver* t : trackers) if((t->m_unObjectId != vr::k_unTrackedDeviceIndexInvalid)) t->RunFrame();
 
     vr::VREvent_t vrEvent;
     while (vr::VRServerDriverHost()->PollNextEvent(&vrEvent, sizeof(vrEvent)))

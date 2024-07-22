@@ -697,7 +697,7 @@ public:                                                                         
                     }
 
                     vr::VRDriverInput()->UpdateScalarComponent(m_compTrigv, inputState.IndexTrigger[isRightHand], 0);
-                    vr::VRDriverInput()->UpdateBooleanComponent(m_compGripv, inputState.HandTrigger[isRightHand] > 0.5, 0);
+                    vr::VRDriverInput()->UpdateBooleanComponent(m_compGripb, inputState.HandTrigger[isRightHand] > 0.5, 0);
                     vr::VRDriverInput()->UpdateScalarComponent(m_compGripv, inputState.HandTrigger[isRightHand], 0);
                     vr::VRDriverInput()->UpdateScalarComponent(m_compJoyx, inputState.Thumbstick[isRightHand].x, 0);
                     vr::VRDriverInput()->UpdateScalarComponent(m_compJoyy, inputState.Thumbstick[isRightHand].y, 0);
@@ -782,8 +782,8 @@ public:                                                                         
 
     std::string GetSerialNumber() const { return m_sSerialNumber; }
 
-private:
     vr::TrackedDeviceIndex_t m_unObjectId;
+private:
     vr::PropertyContainerHandle_t m_ulPropertyContainer;
 
     vr::VRInputComponentHandle_t m_compAc;
