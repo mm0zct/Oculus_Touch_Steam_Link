@@ -66,6 +66,7 @@ struct config_data {
     double world_translation[3];
     vr::HmdQuaternion_t world_orientation_q;
     double world_orientation_euler[3];
+    double skeleton_smoothing;
 };
 
 struct shared_buffer {
@@ -89,10 +90,13 @@ void log_to_buffer(std::string s) {
     if (!comm_buffer) return;
     WaitForSingleObject(comm_mutex, INFINITE);
     for (int i = 0; i < s.size(); i++) {
-        comm_buffer->logging_buffer[comm_buffer->logging_offset + i] = s.c_str()[i];
+        if (comm_buffer->logging_offset < 1023) {
+            comm_buffer->logging_buffer[comm_buffer->logging_offset] = s.c_str()[i];
+            comm_buffer->logging_offset++;
+        }
     }
-    comm_buffer->logging_buffer[comm_buffer->logging_offset + s.size()] = '\n';
-    comm_buffer->logging_offset += s.size() + 1;
+    comm_buffer->logging_buffer[comm_buffer->logging_offset] = '\n';
+    comm_buffer->logging_offset ++;
     ReleaseMutex(comm_mutex);
     return;
 }

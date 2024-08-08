@@ -614,7 +614,7 @@ public:                                                                         
                         vr::VRDriverInput()->UpdateBooleanComponent(m_compJoyt, inputState.Touches & ovrTouch_RThumb, 0);
 #if DO_SKELETON
 
-                        VRBoneTransform_t active_hand_pose[HSB_Count];
+                        VRBoneTransform_t target_hand_pose[HSB_Count];
                         float hand_blend_fraction = inputState.HandTrigger[isRightHand];
                         float finger_bend_fraction = inputState.IndexTrigger[isRightHand];
                         if (!(inputState.Touches & ovrTouch_RThumbUp)) {
@@ -624,17 +624,22 @@ public:                                                                         
                             }
                         }
 
-                        for (int i = 0; i < HSB_Count; i++) active_hand_pose[i] = blend_bones(right_open_hand_pose[i], right_fist_pose[i], hand_blend_fraction);
+                        for (int i = 0; i < HSB_Count; i++) target_hand_pose[i] = blend_bones(right_open_hand_pose[i], right_fist_pose[i], hand_blend_fraction);
 
-                        for (int i = HSB_IndexFinger0; i <= HSB_IndexFinger4; i++) active_hand_pose[i] = blend_bones(right_open_hand_pose[i], right_fist_pose[i], finger_bend_fraction);
+                        for (int i = HSB_IndexFinger0; i <= HSB_IndexFinger4; i++) target_hand_pose[i] = blend_bones(right_open_hand_pose[i], right_fist_pose[i], finger_bend_fraction);
 
                         if (finger_bend_fraction > hand_blend_fraction)
-                            for (int i = HSB_Thumb0; i <= HSB_Thumb3; i++) active_hand_pose[i] = blend_bones(right_open_hand_pose[i], right_fist_pose[i], finger_bend_fraction);
+                            for (int i = HSB_Thumb0; i <= HSB_Thumb3; i++) target_hand_pose[i] = blend_bones(right_open_hand_pose[i], right_fist_pose[i], finger_bend_fraction);
 
                         if (inputState.Touches & ovrTouch_RThumbUp)
                         {
-                            for (int i = HSB_Thumb0; i <= HSB_Thumb3; i++) active_hand_pose[i] = right_open_hand_pose[i];
+                            for (int i = HSB_Thumb0; i <= HSB_Thumb3; i++) target_hand_pose[i] = right_open_hand_pose[i];
                         }
+                        else {
+                            for (int i = HSB_Thumb0; i <= HSB_Thumb3; i++) target_hand_pose[i] = blend_bones(right_open_hand_pose[i], right_fist_pose[i], max(0.5, finger_bend_fraction));
+                        }
+
+                        for (int i = 0; i < HSB_Count; i++) active_hand_pose[i] = blend_bones(active_hand_pose[i], target_hand_pose[i], comm_buffer->config.skeleton_smoothing);
                         vr::VRDriverInput()->UpdateSkeletonComponent(
                             m_compSkel,
                             vr::VRSkeletalMotionRange_WithoutController,
@@ -661,7 +666,7 @@ public:                                                                         
 
                         vr::VRDriverInput()->UpdateBooleanComponent(m_compSysc, inputState.Buttons & ovrButton_Enter, 0);
 #if DO_LSKELETON
-                        VRBoneTransform_t active_hand_pose[HSB_Count];
+                        VRBoneTransform_t target_hand_pose[HSB_Count];
 
                         float hand_blend_fraction = inputState.HandTrigger[isRightHand];
                         float finger_bend_fraction = inputState.IndexTrigger[isRightHand];
@@ -672,17 +677,23 @@ public:                                                                         
                             }
                         }
 
-                        for (int i = 0; i < HSB_Count; i++) active_hand_pose[i] = blend_bones(left_open_hand_pose[i], left_fist_pose[i], hand_blend_fraction);
+                        for (int i = 0; i < HSB_Count; i++) target_hand_pose[i] = blend_bones(left_open_hand_pose[i], left_fist_pose[i], hand_blend_fraction);
 
-                        for (int i = HSB_IndexFinger0; i <= HSB_IndexFinger4; i++) active_hand_pose[i] = blend_bones(left_open_hand_pose[i], left_fist_pose[i], finger_bend_fraction);
+                        for (int i = HSB_IndexFinger0; i <= HSB_IndexFinger4; i++) target_hand_pose[i] = blend_bones(left_open_hand_pose[i], left_fist_pose[i], finger_bend_fraction);
 
                         if (finger_bend_fraction > hand_blend_fraction)
-                            for (int i = HSB_Thumb0; i <= HSB_Thumb3; i++) active_hand_pose[i] = blend_bones(left_open_hand_pose[i], left_fist_pose[i], finger_bend_fraction);
+                            for (int i = HSB_Thumb0; i <= HSB_Thumb3; i++) target_hand_pose[i] = blend_bones(left_open_hand_pose[i], left_fist_pose[i], finger_bend_fraction);
 
                         if (inputState.Touches & ovrTouch_LThumbUp)
                         {
-                            for (int i = HSB_Thumb0; i <= HSB_Thumb3; i++) active_hand_pose[i] = left_open_hand_pose[i];
+                            for (int i = HSB_Thumb0; i <= HSB_Thumb3; i++) target_hand_pose[i] = left_open_hand_pose[i];
                         }
+                        else {
+                            for (int i = HSB_Thumb0; i <= HSB_Thumb3; i++) target_hand_pose[i] = blend_bones(left_open_hand_pose[i], left_fist_pose[i], max(0.5, finger_bend_fraction));
+                        }
+
+                        for (int i = 0; i < HSB_Count; i++) active_hand_pose[i] = blend_bones(active_hand_pose[i], target_hand_pose[i], comm_buffer->config.skeleton_smoothing);
+
                         vr::VRDriverInput()->UpdateSkeletonComponent(
                             m_compSkel,
                             vr::VRSkeletalMotionRange_WithoutController,
@@ -818,6 +829,8 @@ private:
     DriverPose_t m_last_pose;
     float m_time_of_last_pose;
 
+
+    VRBoneTransform_t active_hand_pose[HSB_Count];
 
     /*std::chrono::time_point<std::chrono::steady_clock>  haptic_end;
     float  haptic_strength;

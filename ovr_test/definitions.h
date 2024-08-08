@@ -41,6 +41,7 @@ struct config_data {
     double world_translation[3];
     vr::HmdQuaternion_t world_orientation_q;
     double world_orientation_euler[3];
+    double skeleton_smoothing;
 };
 
 struct shared_buffer {

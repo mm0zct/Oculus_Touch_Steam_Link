@@ -29,7 +29,7 @@ void main_loop(ovrSession mSession, HANDLE comm_mutex, shared_buffer* comm_buffe
 
     WaitForSingleObject(comm_mutex, INFINITE);
     if (comm_buffer->logging_offset) {
-        for (int i = 0; i < comm_buffer->logging_offset; i++) {
+        for (int i = 0;  ((i < 1024) && (i < comm_buffer->logging_offset)); i++) {
             putc(comm_buffer->logging_buffer[i], stdout);
         }
         comm_buffer->logging_offset = 0;
@@ -263,6 +263,7 @@ void reset_config_settings(config_data& config) {
     config.world_orientation_euler[0] = 0.0;
     config.world_orientation_euler[1] = 0.0;
     config.world_orientation_euler[2] = 0.0;
+    config.skeleton_smoothing = 0.2;
 }
 
 void save_config_to_file(config_data& config) {
@@ -308,6 +309,7 @@ void save_config_to_file(config_data& config) {
     ofs << config.world_orientation_euler[1] << std::endl;
     ofs << config.world_orientation_euler[2] << std::endl;
     ofs << config.disable_controllers << std::endl;
+    ofs << config.skeleton_smoothing << std::endl;
     ofs.close();
 }
 
@@ -359,6 +361,7 @@ void load_config_from_file(config_data& config) {
         ifs >> config.world_orientation_euler[2];
 
         ifs >> config.disable_controllers;
+        ifs >> config.skeleton_smoothing;
         ifs.close();
     }
 }

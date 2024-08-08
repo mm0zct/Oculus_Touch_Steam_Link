@@ -8,7 +8,7 @@
 #define _USE_MATH_DEFINES
 #include <math.h>
 
-#define DEBUG_VIB 1
+//#define DEBUG_VIB 1
 
 class unique_window_id {
 public:
@@ -513,12 +513,44 @@ std::vector<config_window_object> config_windows = {
             SetWindowText((HWND)self->wnd, CompBuffer);
             return;
         } }
-, { L"Reset",L"BUTTON", WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_FLAT | BS_TEXT ,
+
+    , { L"skeleton smoothing",L"EDIT", WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_FLAT | BS_TEXT | ES_READONLY,
+            default_wm_command, default_init }
+            , { L"0.2",L"EDIT", WS_VISIBLE | WS_CHILD | ES_NUMBER,
+                [](HWND window, WPARAM wp, LPARAM lp, shared_buffer* comm_buffer) {
+                    switch (HIWORD(wp))
+                    {
+                    case EN_CHANGE:
+                        {
+                            const size_t len = 64;
+                            WCHAR Buffer[len];
+                            double smoothing;
+                            GetWindowText((HWND)lp, Buffer, len);
+                            swscanf_s(Buffer, L"%lf", &smoothing);
+                            std::wcout << L"control text is: " << Buffer << std::endl;
+                            std::cout << "parsed smoothing " << smoothing << std::endl;
+
+                            comm_buffer->config.skeleton_smoothing = smoothing;
+                        }
+                    }
+                    return;
+            },  [](config_window_object* self, HWND parent, shared_buffer* comm_buffer) {
+            self->parent = parent;
+            orient_q_wp = self;
+            const size_t len = 64;
+            WCHAR CompBuffer[len];
+            swprintf_s(CompBuffer, len, L"%.2lf", comm_buffer->config.skeleton_smoothing);
+            SetWindowText((HWND)self->wnd, CompBuffer);
+            return; 
+        } }
+
+            , { L"Reset",L"BUTTON", WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_FLAT | BS_TEXT ,
     [](HWND window, WPARAM wp, LPARAM lp, shared_buffer* comm_buffer) {
         reset_config_settings(comm_buffer->config);
         GUI_Manager::self->reset_settings_window();
         return;
     }, default_init }
+
 #ifdef DEBUG_VIB
  , { L"frequency amplitude duration",L"EDIT", WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_FLAT | BS_TEXT | ES_READONLY,
                     default_wm_command, default_init }
@@ -580,7 +612,7 @@ GUI_Manager::GUI_Manager(shared_buffer* comm_buffer)
     {
         window = CreateWindowEx(0, L"MyWindowsApp", L"OculusTouchlink Configuration",
             WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT,
-            600, 630, 0, 0, GetModuleHandle(0), 0);
+            600, 650, 0, 0, GetModuleHandle(0), 0);
 
     }
 
