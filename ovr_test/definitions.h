@@ -44,16 +44,50 @@ struct config_data {
     double skeleton_smoothing;
 };
 
+
+struct vib_sample {
+    float amplitude;
+    float freqency;
+    float duration;
+    double timestamp;
+};
+
+struct vib_sample_buffer {
+    vib_sample buf[128];
+    std::atomic<unsigned int> head;
+    std::atomic<unsigned int> tail;
+    void reset() {
+        head = tail = 0;
+    }
+    bool empty() {
+        return head == tail;
+    }
+    bool full() {
+        return (((128 + tail) - head) % 128) == 1;
+    }
+    void push(vib_sample sample) {
+        if (!full()) {
+            buf[head] = sample;
+            int new_head = (head + 1) % 128;
+            head = new_head;
+        }
+    }
+    bool pop(vib_sample& sample) {
+        if (empty()) return false;
+        sample = buf[tail];
+        unsigned int new_tail = (tail + 1) % 128;
+        tail = new_tail;
+        return true;
+    }
+};
+
 struct shared_buffer {
     config_data config;
     ovrInputState input_state;
     ovrTrackingState tracking_state;
     ovrPoseStatef object_poses[4];
     uint32_t vrEvent_type;
-    float vib_amplitude[2];
-    float vib_frequency[2];
-    float vib_duration_s[2];
-    bool vib_valid[2];
+    vib_sample_buffer vib_buffers[2];
     uint64_t logging_offset;
     char logging_buffer[1024];
 };

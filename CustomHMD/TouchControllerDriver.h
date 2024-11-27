@@ -597,11 +597,11 @@ public:                                                                         
                 // state. There's no need to update input state unless it changes, but it doesn't do any harm to do so.
         if (!comm_buffer->config.be_objects) {
 #if USE_MUTEX
-            if (!WaitForSingleObject(comm_mutex, 10)) {
+ //           if (!WaitForSingleObject(comm_mutex, 10)) 
 #else
-                {
+                
 #endif
-
+            {
                     ovrInputState& inputState(comm_buffer->input_state);
                     if (isRightHand) {
                         //ovr_GetInputState(mSession, ovrControllerType::ovrControllerType_RTouch, &inputState);
@@ -612,6 +612,11 @@ public:                                                                         
                         vr::VRDriverInput()->UpdateBooleanComponent(m_compBt, inputState.Touches & ovrTouch_B, 0);
                         vr::VRDriverInput()->UpdateBooleanComponent(m_compTrigt, inputState.Touches & ovrTouch_RIndexTrigger, 0);
                         vr::VRDriverInput()->UpdateBooleanComponent(m_compJoyt, inputState.Touches & ovrTouch_RThumb, 0);
+#if USE_MUTEX
+//                        ReleaseMutex(comm_mutex);
+#endif
+                        if (inputState.Buttons & ovrButton_A)log_to_buffer("A");
+                        if (inputState.Buttons & ovrButton_B)log_to_buffer("B");
 #if DO_SKELETON
 
                         VRBoneTransform_t target_hand_pose[HSB_Count];
@@ -665,6 +670,10 @@ public:                                                                         
                         vr::VRDriverInput()->UpdateBooleanComponent(m_compJoyt, inputState.Touches & ovrTouch_LThumb, 0);
 
                         vr::VRDriverInput()->UpdateBooleanComponent(m_compSysc, inputState.Buttons & ovrButton_Enter, 0);
+
+#if USE_MUTEX
+                        //                        ReleaseMutex(comm_mutex);
+#endif
 #if DO_LSKELETON
                         VRBoneTransform_t target_hand_pose[HSB_Count];
 
@@ -713,9 +722,7 @@ public:                                                                         
                     vr::VRDriverInput()->UpdateScalarComponent(m_compJoyx, inputState.Thumbstick[isRightHand].x, 0);
                     vr::VRDriverInput()->UpdateScalarComponent(m_compJoyy, inputState.Thumbstick[isRightHand].y, 0);
 
-#if USE_MUTEX
-                    ReleaseMutex(comm_mutex);
-#endif
+
                 }
             }
 
@@ -769,8 +776,16 @@ public:                                                                         
         {
             if (vrEvent.data.hapticVibration.componentHandle == m_compHaptic)
             {
-
-
+                vib_sample s;
+                s.amplitude = vrEvent.data.hapticVibration.fAmplitude;
+                s.duration = vrEvent.data.hapticVibration.fDurationSeconds;
+                s.freqency = vrEvent.data.hapticVibration.fFrequency;
+                s.timestamp = ovr_GetTimeInSeconds();
+                if (comm_buffer->vib_buffers[isRightHand].full()) {
+                    log_to_buffer("haptic full\n");
+                }
+                comm_buffer->vib_buffers[isRightHand].push(s);
+/*
 #if USE_MUTEX                
                 if (!WaitForSingleObject(comm_mutex, 10)) {
 #endif
@@ -782,6 +797,7 @@ public:                                                                         
                     ReleaseMutex(comm_mutex);
                 }
 #endif
+*/
 
 
             }

@@ -8,7 +8,7 @@
 #define _USE_MATH_DEFINES
 #include <math.h>
 
-//#define DEBUG_VIB 1
+#define DEBUG_VIB 1
 
 class unique_window_id {
 public:
@@ -94,6 +94,45 @@ std::vector<config_window_object> config_windows = {
         CheckDlgButton(parent, self->id.get_id(), comm_buffer->config.do_rendering ? BST_CHECKED : BST_UNCHECKED);
         return;
     } }
+    #ifdef DEBUG_VIB
+ , { L"frequency amplitude duration",L"EDIT", WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_FLAT | BS_TEXT | ES_READONLY,
+                    default_wm_command, default_init }
+        , { L"0.0000 0.0000 0.0000",L"EDIT", WS_VISIBLE | WS_CHILD | ES_NUMBER,
+                    [](HWND window, WPARAM wp, LPARAM lp, shared_buffer* comm_buffer) {
+                        switch (HIWORD(wp))
+                        {
+                        case EN_CHANGE:
+                            {
+                                const size_t len = 64;
+                                WCHAR Buffer[len];
+                                double offset[3];
+                                GetWindowText((HWND)lp, Buffer, len);
+                                swscanf_s(Buffer, L"%lf %lf %lf", &offset[0], &offset[1], &offset[2]);
+                                std::wcout << L"control text is: " << Buffer << std::endl;
+                                std::cout << "parsed vib " << offset[0] << " " << offset[1] << " " << offset[2] << std::endl;
+                                vib_sample s;
+                                s.freqency = offset[0];
+                                s.amplitude = offset[1];
+                                s.duration = offset[2];
+                                s.timestamp = ovr_GetTimeInSeconds();
+                                comm_buffer->vib_buffers[0].push(s);
+                                //comm_buffer->vib_buffers[1].push(s);
+                                /*
+                                comm_buffer->vib_frequency[0] = offset[0];
+                                comm_buffer->vib_amplitude[0] = offset[1];
+                                comm_buffer->vib_duration_s[0] = offset[2];
+                                comm_buffer->vib_valid[0] = true;
+
+                                comm_buffer->vib_frequency[1] = offset[0];
+                                comm_buffer->vib_amplitude[1] = offset[1];
+                                comm_buffer->vib_duration_s[1] = offset[2];
+                                comm_buffer->vib_valid[1] = true;
+                                */
+                            }
+                        }
+                        return;
+                    }, default_init }
+#endif
 ,  {L"Enable External Tracking",L"BUTTON", WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_FLAT | BS_TEXT | BS_CHECKBOX,
     [](HWND window, WPARAM wp, LPARAM lp, shared_buffer* comm_buffer) {
         BOOL checked = IsDlgButtonChecked(window, wp);
@@ -551,37 +590,7 @@ std::vector<config_window_object> config_windows = {
         return;
     }, default_init }
 
-#ifdef DEBUG_VIB
- , { L"frequency amplitude duration",L"EDIT", WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_FLAT | BS_TEXT | ES_READONLY,
-                    default_wm_command, default_init }
-        , { L"0.0000 0.0000 0.0000",L"EDIT", WS_VISIBLE | WS_CHILD | ES_NUMBER,
-                    [](HWND window, WPARAM wp, LPARAM lp, shared_buffer* comm_buffer) {
-                        switch (HIWORD(wp))
-                        {
-                        case EN_CHANGE:
-                            {
-                                const size_t len = 64;
-                                WCHAR Buffer[len];
-                                double offset[3];
-                                GetWindowText((HWND)lp, Buffer, len);
-                                swscanf_s(Buffer, L"%lf %lf %lf", &offset[0], &offset[1], &offset[2]);
-                                std::wcout << L"control text is: " << Buffer << std::endl;
-                                std::cout << "parsed vib " << offset[0] << " " << offset[1] << " " << offset[2] << std::endl;
-  
-                                comm_buffer->vib_frequency[0] = offset[0];
-                                comm_buffer->vib_amplitude[0] = offset[1];
-                                comm_buffer->vib_duration_s[0] = offset[2];
-                                comm_buffer->vib_valid[0] = true;
 
-                                comm_buffer->vib_frequency[1] = offset[0];
-                                comm_buffer->vib_amplitude[1] = offset[1];
-                                comm_buffer->vib_duration_s[1] = offset[2];
-                                comm_buffer->vib_valid[1] = true;
-                            }
-                        }
-                        return;
-                    }, default_init }
-#endif
 };
 
 std::map<HWND, config_window_object*> config_window_map;

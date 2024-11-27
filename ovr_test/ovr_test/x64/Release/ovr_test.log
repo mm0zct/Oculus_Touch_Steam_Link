@@ -1,17 +1,19 @@
 ﻿  ovr_test.cpp
 C:\Users\the_c\GitHub\Oculus_Touch_Steam_Link\ovr_test\ovr_test.cpp(46,23): warning C4018: '<': signed/unsigned mismatch
-C:\Users\the_c\GitHub\Oculus_Touch_Steam_Link\ovr_test\ovr_test.cpp(210,23): warning C4018: '<': signed/unsigned mismatch
-C:\Users\the_c\GitHub\Oculus_Touch_Steam_Link\ovr_test\ovr_test.cpp(435,55): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-C:\Users\the_c\GitHub\Oculus_Touch_Steam_Link\ovr_test\ovr_test.cpp(439,52): warning C4244: '=': conversion from 'unsigned long' to 'uint8_t', possible loss of data
-C:\Users\the_c\GitHub\Oculus_Touch_Steam_Link\ovr_test\ovr_test.cpp(537,23): warning C4018: '<': signed/unsigned mismatch
-C:\Users\the_c\GitHub\Oculus_Touch_Steam_Link\ovr_test\ovr_test.cpp(541,90): warning C4244: 'argument': conversion from 'uint64_t' to 'uint32_t', possible loss of data
-C:\Users\the_c\GitHub\Oculus_Touch_Steam_Link\ovr_test\ovr_test.cpp(549,28): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
-C:\Users\the_c\GitHub\Oculus_Touch_Steam_Link\ovr_test\ovr_test.cpp(550,39): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
-C:\Users\the_c\GitHub\Oculus_Touch_Steam_Link\ovr_test\ovr_test.cpp(574,33): warning C4244: 'initializing': conversion from 'float' to 'uint32_t', possible loss of data
-C:\Users\the_c\GitHub\Oculus_Touch_Steam_Link\ovr_test\ovr_test.cpp(579,24): warning C4244: '=': conversion from 'float' to 'uint32_t', possible loss of data
+C:\Users\the_c\GitHub\Oculus_Touch_Steam_Link\ovr_test\ovr_test.cpp(177,23): warning C4018: '<': signed/unsigned mismatch
+C:\Users\the_c\GitHub\Oculus_Touch_Steam_Link\ovr_test\ovr_test.cpp(407,55): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+C:\Users\the_c\GitHub\Oculus_Touch_Steam_Link\ovr_test\ovr_test.cpp(411,52): warning C4244: '=': conversion from 'unsigned long' to 'uint8_t', possible loss of data
+C:\Users\the_c\GitHub\Oculus_Touch_Steam_Link\ovr_test\ovr_test.cpp(509,23): warning C4018: '<': signed/unsigned mismatch
+C:\Users\the_c\GitHub\Oculus_Touch_Steam_Link\ovr_test\ovr_test.cpp(513,90): warning C4244: 'argument': conversion from 'uint64_t' to 'uint32_t', possible loss of data
+C:\Users\the_c\GitHub\Oculus_Touch_Steam_Link\ovr_test\ovr_test.cpp(521,28): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+C:\Users\the_c\GitHub\Oculus_Touch_Steam_Link\ovr_test\ovr_test.cpp(522,39): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+C:\Users\the_c\GitHub\Oculus_Touch_Steam_Link\ovr_test\ovr_test.cpp(549,33): warning C4244: 'initializing': conversion from 'float' to 'uint32_t', possible loss of data
+C:\Users\the_c\GitHub\Oculus_Touch_Steam_Link\ovr_test\ovr_test.cpp(554,24): warning C4244: '=': conversion from 'float' to 'uint32_t', possible loss of data
+C:\Users\the_c\GitHub\Oculus_Touch_Steam_Link\ovr_test\ovr_test.cpp(604,49): warning C4305: '=': truncation from 'double' to 'float'
+C:\Users\the_c\GitHub\Oculus_Touch_Steam_Link\ovr_test\ovr_test.cpp(655,34): warning C4244: '=': conversion from 'uint64_t' to 'uint32_t', possible loss of data
   Generating code
-  2 of 1379 functions ( 0.1%) were compiled, the rest were copied from previous compilation.
-    0 functions were new in current compilation
+  3 of 1451 functions ( 0.2%) were compiled, the rest were copied from previous compilation.
+    1 functions were new in current compilation
     2 functions had inline decision re-evaluated but remain unchanged
   Finished generating code
   ovr_test.vcxproj -> C:\Users\the_c\GitHub\Oculus_Touch_Steam_Link\ovr_test\x64\Release\ovr_test.exe

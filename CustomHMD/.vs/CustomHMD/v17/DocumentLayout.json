@@ -3,24 +3,24 @@
   "WorkspaceRootPath": "C:\\Users\\the_c\\GitHub\\Oculus_Touch_Steam_Link\\CustomHMD\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{A47C788B-1BDA-4057-87A9-FC35ED711B44}|CustomHMD.vcxproj|C:\\Users\\the_c\\GitHub\\Oculus_Touch_Steam_Link\\CustomHMD\\TouchControllerDriver.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
-      "RelativeMoniker": "D:0:0:{A47C788B-1BDA-4057-87A9-FC35ED711B44}|CustomHMD.vcxproj|solutionrelative:TouchControllerDriver.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{A47C788B-1BDA-4057-87A9-FC35ED711B44}|CustomHMD.vcxproj|C:\\Users\\the_c\\GitHub\\Oculus_Touch_Steam_Link\\CustomHMD\\TouchTrackerDriver.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
-      "RelativeMoniker": "D:0:0:{A47C788B-1BDA-4057-87A9-FC35ED711B44}|CustomHMD.vcxproj|solutionrelative:TouchTrackerDriver.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+      "AbsoluteMoniker": "D:0:0:{A47C788B-1BDA-4057-87A9-FC35ED711B44}|CustomHMD.vcxproj|C:\\Users\\the_c\\GitHub\\Oculus_Touch_Steam_Link\\CustomHMD\\Common.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{A47C788B-1BDA-4057-87A9-FC35ED711B44}|CustomHMD.vcxproj|solutionrelative:Common.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{A47C788B-1BDA-4057-87A9-FC35ED711B44}|CustomHMD.vcxproj|C:\\Users\\the_c\\GitHub\\Oculus_Touch_Steam_Link\\CustomHMD\\OculusTouchLink.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
       "RelativeMoniker": "D:0:0:{A47C788B-1BDA-4057-87A9-FC35ED711B44}|CustomHMD.vcxproj|solutionrelative:OculusTouchLink.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{A47C788B-1BDA-4057-87A9-FC35ED711B44}|CustomHMD.vcxproj|C:\\Users\\the_c\\GitHub\\Oculus_Touch_Steam_Link\\CustomHMD\\Common.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
-      "RelativeMoniker": "D:0:0:{A47C788B-1BDA-4057-87A9-FC35ED711B44}|CustomHMD.vcxproj|solutionrelative:Common.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{A47C788B-1BDA-4057-87A9-FC35ED711B44}|CustomHMD.vcxproj|C:\\Users\\the_c\\GitHub\\Oculus_Touch_Steam_Link\\CustomHMD\\HeadsetTrackerDriver.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
       "RelativeMoniker": "D:0:0:{A47C788B-1BDA-4057-87A9-FC35ED711B44}|CustomHMD.vcxproj|solutionrelative:HeadsetTrackerDriver.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A47C788B-1BDA-4057-87A9-FC35ED711B44}|CustomHMD.vcxproj|C:\\Users\\the_c\\GitHub\\Oculus_Touch_Steam_Link\\CustomHMD\\TouchTrackerDriver.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{A47C788B-1BDA-4057-87A9-FC35ED711B44}|CustomHMD.vcxproj|solutionrelative:TouchTrackerDriver.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A47C788B-1BDA-4057-87A9-FC35ED711B44}|CustomHMD.vcxproj|C:\\Users\\the_c\\GitHub\\Oculus_Touch_Steam_Link\\CustomHMD\\TouchControllerDriver.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{A47C788B-1BDA-4057-87A9-FC35ED711B44}|CustomHMD.vcxproj|solutionrelative:TouchControllerDriver.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
     }
   ],
   "DocumentGroupContainers": [
@@ -35,12 +35,38 @@
             {
               "$type": "Document",
               "DocumentIndex": 0,
+              "Title": "Common.h",
+              "DocumentMoniker": "C:\\Users\\the_c\\GitHub\\Oculus_Touch_Steam_Link\\CustomHMD\\Common.h",
+              "RelativeDocumentMoniker": "Common.h",
+              "ToolTip": "C:\\Users\\the_c\\GitHub\\Oculus_Touch_Steam_Link\\CustomHMD\\Common.h",
+              "RelativeToolTip": "Common.h",
+              "ViewState": "AQIAAGsAAAAAAAAAAIAywHIAAAATAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
+              "WhenOpened": "2024-03-28T22:31:24.439Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "OculusTouchLink.cpp",
+              "DocumentMoniker": "C:\\Users\\the_c\\GitHub\\Oculus_Touch_Steam_Link\\CustomHMD\\OculusTouchLink.cpp",
+              "RelativeDocumentMoniker": "OculusTouchLink.cpp",
+              "ToolTip": "C:\\Users\\the_c\\GitHub\\Oculus_Touch_Steam_Link\\CustomHMD\\OculusTouchLink.cpp",
+              "RelativeToolTip": "OculusTouchLink.cpp",
+              "ViewState": "AQIAAEUBAAAAAAAAAIAywFUBAAANAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
+              "WhenOpened": "2024-03-28T22:31:24.728Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
               "Title": "TouchControllerDriver.h",
               "DocumentMoniker": "C:\\Users\\the_c\\GitHub\\Oculus_Touch_Steam_Link\\CustomHMD\\TouchControllerDriver.h",
               "RelativeDocumentMoniker": "TouchControllerDriver.h",
               "ToolTip": "C:\\Users\\the_c\\GitHub\\Oculus_Touch_Steam_Link\\CustomHMD\\TouchControllerDriver.h",
               "RelativeToolTip": "TouchControllerDriver.h",
-              "ViewState": "AQIAAKMCAAAAAAAAAAAAALQCAAAZAAAA",
+              "ViewState": "AQIAAEYCAAAAAAAAAIAywFcCAAAmAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
               "WhenOpened": "2024-08-13T22:41:23.482Z",
               "EditorCaption": ""
@@ -48,31 +74,6 @@
             {
               "$type": "Document",
               "DocumentIndex": 3,
-              "Title": "Common.h",
-              "DocumentMoniker": "C:\\Users\\the_c\\GitHub\\Oculus_Touch_Steam_Link\\CustomHMD\\Common.h",
-              "RelativeDocumentMoniker": "Common.h",
-              "ToolTip": "C:\\Users\\the_c\\GitHub\\Oculus_Touch_Steam_Link\\CustomHMD\\Common.h",
-              "RelativeToolTip": "Common.h",
-              "ViewState": "AQIAACwAAAAAAAAAAAAAADEAAAAUAAAA",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
-              "WhenOpened": "2024-03-28T22:31:24.439Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 2,
-              "Title": "OculusTouchLink.cpp",
-              "DocumentMoniker": "C:\\Users\\the_c\\GitHub\\Oculus_Touch_Steam_Link\\CustomHMD\\OculusTouchLink.cpp",
-              "RelativeDocumentMoniker": "OculusTouchLink.cpp",
-              "ToolTip": "C:\\Users\\the_c\\GitHub\\Oculus_Touch_Steam_Link\\CustomHMD\\OculusTouchLink.cpp",
-              "RelativeToolTip": "OculusTouchLink.cpp",
-              "ViewState": "AQIAAHIBAAAAAAAAAAAUwHsBAAAAAAAA",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
-              "WhenOpened": "2024-03-28T22:31:24.728Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 1,
               "Title": "TouchTrackerDriver.h",
               "DocumentMoniker": "C:\\Users\\the_c\\GitHub\\Oculus_Touch_Steam_Link\\CustomHMD\\TouchTrackerDriver.h",
               "RelativeDocumentMoniker": "TouchTrackerDriver.h",
@@ -85,15 +86,16 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 4,
+              "DocumentIndex": 2,
               "Title": "HeadsetTrackerDriver.h",
               "DocumentMoniker": "C:\\Users\\the_c\\GitHub\\Oculus_Touch_Steam_Link\\CustomHMD\\HeadsetTrackerDriver.h",
               "RelativeDocumentMoniker": "HeadsetTrackerDriver.h",
               "ToolTip": "C:\\Users\\the_c\\GitHub\\Oculus_Touch_Steam_Link\\CustomHMD\\HeadsetTrackerDriver.h",
               "RelativeToolTip": "HeadsetTrackerDriver.h",
-              "ViewState": "AQIAAAAAAAAAAAAAAAAAABIAAAAAAAAA",
+              "ViewState": "AQIAABMAAAAAAAAAAIAywBoAAAAAAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
-              "WhenOpened": "2024-03-28T22:31:24.336Z"
+              "WhenOpened": "2024-03-28T22:31:24.336Z",
+              "EditorCaption": ""
             }
           ]
         }
