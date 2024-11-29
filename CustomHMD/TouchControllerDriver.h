@@ -615,8 +615,7 @@ public:                                                                         
 #if USE_MUTEX
 //                        ReleaseMutex(comm_mutex);
 #endif
-                        if (inputState.Buttons & ovrButton_A)log_to_buffer("A");
-                        if (inputState.Buttons & ovrButton_B)log_to_buffer("B");
+
 #if DO_SKELETON
 
                         VRBoneTransform_t target_hand_pose[HSB_Count];
@@ -780,10 +779,10 @@ public:                                                                         
                 s.amplitude = vrEvent.data.hapticVibration.fAmplitude;
                 s.duration = vrEvent.data.hapticVibration.fDurationSeconds;
                 s.freqency = vrEvent.data.hapticVibration.fFrequency;
-                s.timestamp = ovr_GetTimeInSeconds();
-                if (comm_buffer->vib_buffers[isRightHand].full()) {
-                    log_to_buffer("haptic full\n");
-                }
+                s.timestamp = 0;// ovr_GetTimeInSeconds();
+                //if (comm_buffer->vib_buffers[isRightHand].full()) {
+                //    log_to_buffer("haptic full\n");
+                //}
                 comm_buffer->vib_buffers[isRightHand].push(s);
 /*
 #if USE_MUTEX                

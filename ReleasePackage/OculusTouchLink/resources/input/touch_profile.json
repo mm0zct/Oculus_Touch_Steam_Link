@@ -4,6 +4,7 @@
   "device_class" : "TrackedDeviceClass_Controller",
   "resource_root" : "OculusTouchLink",
   "driver_name" : "OculusTouchLink",
+  "hand_priority" : 100,
   "legacy_binding" : "{OculusTouchLink}/input/legacy_bindings_touch.json",
   "input_bindingui_mode" : "controller_handed",
   "should_show_binding_errors" :  true,

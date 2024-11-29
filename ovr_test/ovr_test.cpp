@@ -5,6 +5,7 @@
 #include "definitions.h"
 #include <fstream>
 #include <mutex>
+#include <atomic>
 
 //#define MAX_HAPTICS
 
@@ -86,21 +87,9 @@ void main_loop(ovrSession mSession, HANDLE comm_mutex, shared_buffer* comm_buffe
 //    ReleaseMutex(comm_mutex);
 
     for( int i =0; i<2; i++){
-        vib_sample s;
-        
-        while (comm_buffer->vib_buffers[i].pop(s)) {
-            //if (s.amplitude == 0 && (s.duration > 0)) {
-            //    add_vibration(i == 1, 0, 0, s.duration);
-            //}
+    
 
-            if (s.amplitude) {
-                printf("vib[%u] dur %f=%f | freq %f | amp %f | time %lums  = %lf\n", i, s.duration, s.duration * 320, s.freqency, s.amplitude, (unsigned long)(s.timestamp * 1000), s.timestamp);
-                add_vibration(i == 1, s.freqency, s.amplitude, s.duration);                
-
-            }
-        }
-
-        if ((frame_count & 0x1FF) == 0) {
+        if ((frame_count & 0x7FF) == 0) {
             std::cout.precision(4);
 
             std::cout << (i == 0 ? "lhand" : "rhand") << " 0x" << std::fixed <<
@@ -214,7 +203,9 @@ void reset_config_settings(config_data& config) {
     config.external_tracking = true;
     config.track_hmd = false;
     config.disable_controllers = false;
-    config.min_amplitude = 64;
+    config.disable_left_controller = false;
+    config.disable_right_controller = false;
+    config.min_amplitude = 0;
     config.amplitude_scale = 1.0;
     config.sqrt_pre_filter = false;
     config.sqrt_post_filter = true;
@@ -277,6 +268,8 @@ void save_config_to_file(config_data& config) {
     ofs << config.world_orientation_euler[2] << std::endl;
     ofs << config.disable_controllers << std::endl;
     ofs << config.skeleton_smoothing << std::endl;
+    ofs << config.disable_left_controller << std::endl;
+    ofs << config.disable_right_controller << std::endl;
     ofs.close();
 }
 
@@ -329,6 +322,9 @@ void load_config_from_file(config_data& config) {
 
         ifs >> config.disable_controllers;
         ifs >> config.skeleton_smoothing;
+
+        ifs >> config.disable_left_controller;
+        ifs >> config.disable_right_controller;
         ifs.close();
     }
 }
@@ -486,128 +482,13 @@ uint8_t clamp_scale(uint8_t sample, float amplitude) {
 }
 
 
-void add_vib_sample(bool isRightHand, uint8_t sample, uint32_t offset, uint8_t pulse_pattern_index, uint8_t pulse_pattern_offset) {
-    future_vib_buffer[isRightHand][offset % 1024] = sample;
-    future_vib_buffer_freq[isRightHand][offset % 1024] = pulse_pattern_index;
-    future_vib_buffer_freq_sample[isRightHand][offset % 1024] = pulse_pattern_offset;
-}
-
-void add_vib_sample_part1(bool isRightHand, uint8_t pulse_pattern_index, uint32_t sample_count, float amplitude) {
-    if (amplitude < comm_buffer->config.min_amplitude) amplitude = comm_buffer->config.min_amplitude;
-    std::lock_guard<std::mutex> lk(vib_mtx);
-    uint64_t sample_offset = 0;
-    uint64_t vib_buffer_sample_delta = 0;// ((ovr_GetTimeInSeconds() - vib_buf_time[isRightHand]) * 320);
-    uint64_t previous_index = (future_vib_buffer_index[isRightHand] + vib_buffer_sample_delta + (1024 - 1)) % 1024;
-    uint64_t next_index = (future_vib_buffer_index[isRightHand] + vib_buffer_sample_delta) % 1024;
-    if (future_vib_buffer_used[isRightHand][previous_index]) {
-        if (future_vib_buffer_freq[isRightHand][previous_index] == pulse_pattern_index) {
-            sample_offset = future_vib_buffer_freq_sample[isRightHand][previous_index];
-        }
-    }
-    std::vector<uint8_t> short_buf;
-    //printf("\n");
-    for (int i = 0; i < sample_count; i++) {
-        uint8_t sample_value = pulse_patterns[pulse_pattern_index][(sample_offset + i) % pulse_pattern_index];
-        //printf("0x%02x ", (unsigned int)clamp_scale(sample_value, amplitude));
-        if (!haptics_direct) {
-            add_vib_sample(isRightHand, clamp_scale(sample_value, amplitude), next_index + i, pulse_pattern_index, (sample_offset + i) % pulse_pattern_index);
-        }
-        else {
-            short_buf.push_back(clamp_scale(sample_value, amplitude));
-        }
-    }
-    //printf("\n");
-    if (haptics_direct) {
-        float current_time = ovr_GetTimeInSeconds();
-        float last_submitted_end_time = vib_buf_time[isRightHand];
-        if (current_time < last_submitted_end_time) {
-            //printf("already have samples, discarding\n");
-        //    return;
-        }
-        vib_buf_time[isRightHand] = current_time + sample_count * (1.0 / 320.0);
-        ovrHapticsBuffer vibuffer;
-        vibuffer.SamplesCount = sample_count;
-        vibuffer.Samples = &short_buf[0];
-        vibuffer.SubmitMode = ovrHapticsBufferSubmit_Enqueue;
-        ovr_SubmitControllerVibration(mSession, isRightHand ? ovrControllerType_RTouch : ovrControllerType_LTouch, &vibuffer);
-    }
-
-}
-
 std::atomic<unsigned int> vib_interval[2] = { 0 };
 std::atomic<float> vib_amplitude[2] = { 0 };
 std::atomic<double> sample_end_time[2] = { 0 };
 void add_vibration(bool isRightHand, float frequency, float amplitude, float duration) {
-
-    //std::cout << " adding haptic for amplitude " << amplitude << " frequency " << frequency << " duration " << duration << std::endl;
-
-    if ((amplitude <= 0) || (frequency <= 0) /*|| (duration <= 0)*/) return;
-    if (duration <= 0) duration = 0;
-   // if (frequency > 1.0)frequency /= 1000.0;
-    float amp = amplitude;
-    float freq = frequency;// * 320.0f;
-    uint32_t requested_duration = duration * 320; // 320 Hz processing rate? seems to be 160
-    //if (requested_duration < 3) requested_duration = 3;
-    if (requested_duration < 1) requested_duration = 1;
-    uint32_t min_duration = 1;
-   // uint32_t pulse_width = 1;
-    min_duration = 320 / freq;
-    if (min_duration < 1) min_duration = 1;
-    if (min_duration > 16)min_duration = 16;
-  /*  if (freq <= 160) {
-        min_duration = 2;
-    //    pulse_width = 1;
-    }
-    if (freq <= 120) {
-        min_duration = 3;
-   //     pulse_width = 1;
-    }
-    if (freq <= 80) {
-        min_duration = 4;
-   //     pulse_width = 2;
-    }
-    if (freq <= 60) {
-        min_duration = 6;
-   //     pulse_width = 3;
-    }
-    if (freq <= 40) {
-        min_duration = 8;
-    //    pulse_width = 4;
-    }
-    if (freq <= 32) {
-        min_duration = 10;
-    //    pulse_width = 5;
-    }
-    if (freq <= 20) {
-        min_duration = 16;
-    //    pulse_width = 8;
-    }*/
-  
-    if (min_duration > requested_duration) requested_duration = min_duration;
-
-  //  std::cout << " adding haptic for amplitude " << amplitude << " -> " << amp << " frequency " << frequency << " -> " << freq << " duration " << duration << " ->" << requested_duration
-    //    <<" pulse_width " << pulse_width << std::endl;
-  
-
-      std::cout << " adding haptic for amplitude " << amplitude << " -> " << amp << " frequency " << frequency << " -> " << freq << " duration " << duration << " ->" << requested_duration
-      <<" pulse_width " << min_duration << std::endl;
-      
-      
-      if (haptics_direct) {
-          add_vib_sample_part1(isRightHand, min_duration, requested_duration, amp);
-      } else {
-          double now = ovr_GetTimeInSeconds();
-          //if (sample_end_time[isRightHand] > now) {
-              //std::cout << "adding " << duration << " to ongoing effect" << std::endl;
-              sample_end_time[isRightHand] += duration;
-          //} else {
-              if (duration == 0 ) duration = (1 / 250.0);
-              std::cout << "starting new effect of duration " << duration << std::endl;
-              sample_end_time[isRightHand] = now + duration;
-          //}
-          vib_amplitude[isRightHand] = amplitude;
-          vib_interval[isRightHand] = lround(199.0f/frequency);
-      }
+    double now = ovr_GetTimeInSeconds();
+    ovrTouchHapticsDesc desc = ovr_GetTouchHapticsDesc(mSession, ovrControllerType_LTouch);
+   
 
 }
 
@@ -618,28 +499,47 @@ void vibration_thread(ovrSession mSession) {
     vibuffer.Samples = buf;
     vibuffer.SubmitMode = ovrHapticsBufferSubmit_Enqueue;
     uint64_t counter = 0;
-    unsigned int last_vib_interval = 0;
-    unsigned int vib_interval_counter = 0;
- 
+    unsigned int last_vib_interval[2] = { 0 };
+    unsigned int vib_interval_counter[2] = { 0 };
+    ovrTouchHapticsDesc desc = ovr_GetTouchHapticsDesc(mSession, ovrControllerType_LTouch);
     while (1) {
 
-        ovrTouchHapticsDesc desc = ovr_GetTouchHapticsDesc(mSession, ovrControllerType_LTouch );
+       
         //Sleep((1000 * desc.SubmitOptimalSamples) / desc.SampleRateHz);
         //Sleep(1000/40);
         for (int hand = 0; hand < 2; hand++) {
-            double now = ovr_GetTimeInSeconds();
+            vib_sample s;
 
+   
+
+            double now = ovr_GetTimeInSeconds();
+            while (comm_buffer->vib_buffers[hand].pop(s)) {
+               // if(s.amplitude)
+               //     printf("vib[%u] dur %f=%f | freq %f | amp %f | time %lums  = %lf\n", hand, s.duration, s.duration * desc.SampleRateHz, s.frequency, s.amplitude, (unsigned long)(now * 1000), now);
+               // add_vibration(hand == 1, s.frequency, s.amplitude, s.duration);
+
+                if (s.duration <= (8.0 / desc.SampleRateHz)) s.duration = (8.0 / desc.SampleRateHz);
+                sample_end_time[hand] = now + s.duration;
+                if (s.amplitude < 0) s.amplitude = -s.amplitude;
+                if (s.frequency < 0) s.frequency = -s.frequency;
+                vib_amplitude[hand] = s.amplitude;
+                vib_interval[hand] = lround(desc.SampleRateHz / s.frequency);
+                vib_interval_counter[hand] = 0;
+                //if (s.amplitude)
+                //    printf("vib[%u] dur %f=%f | freq %f | interval %u | amp %f | time %lums  = %lf\n", hand, s.duration, s.duration * desc.SampleRateHz, s.frequency, vib_interval[hand].load(), s.amplitude, (unsigned long)(now * 1000), now);
+
+            }
             double time_left =  sample_end_time[hand] - now;
             if (time_left<=0) {
-                vib_interval_counter = 0;
+                vib_interval_counter[hand] = 0;
                 continue;
             }
             //std::cout << "sample has " << time_left << "s remaining   now = " << now << "sample end = " << sample_end_time[hand] << std::endl;
             //std::cout << (hand == 0 ? "Left" : "Right") << std::endl;
             //std::lock_guard<std::mutex> lk(vib_mtx);
-            if (last_vib_interval != vib_interval[hand]) {
-                last_vib_interval = vib_interval[hand];
-                vib_interval_counter = 0;
+            if (last_vib_interval[hand] != vib_interval[hand]) {
+                last_vib_interval[hand] = vib_interval[hand];
+                vib_interval_counter[hand] = 0;
             }
             
             //ovrTouchHapticsDesc desc = ovr_GetTouchHapticsDesc(mSession, (hand==0)?ovrControllerType_LTouch: ovrControllerType_RTouch);
@@ -647,39 +547,46 @@ void vibration_thread(ovrSession mSession) {
             ovrHapticsPlaybackState pbState;
             ovr_GetControllerVibrationState(mSession, (hand == 0) ? ovrControllerType_LTouch : ovrControllerType_RTouch, &pbState);
             //std::cout << (counter & 0xff) << " - queue state before space: " << pbState.RemainingQueueSpace << " samples: " << pbState.SamplesQueued << " / min desired samples: " << desc.QueueMinSizeToAvoidStarvation << std::endl;
-            if (vib_amplitude[hand]) {
-                uint32_t need_count = desc.SubmitOptimalSamples - pbState.SamplesQueued;
-                uint64_t samples_remaining = lround(time_left * desc.SampleRateHz);
-                //std::cout << "want " << need_count << " remaining " << samples_remaining << std::endl;
-                if (need_count > samples_remaining) {
-                    need_count = samples_remaining;
-                }
+
+            uint32_t need_count = 0;
+            /*desc.SubmitOptimalSamples*/
+            if(pbState.SamplesQueued < 16 ) need_count =  16 - pbState.SamplesQueued;
+            uint64_t samples_remaining = lround(time_left * desc.SampleRateHz);
+            //std::cout << "want " << need_count << " remaining " << samples_remaining << std::endl;
+            if (need_count > samples_remaining) {
+                need_count = samples_remaining;
+            }
+            if (need_count) {
+                //if (vib_amplitude[hand])std::cout << (counter & 0xff) << " - queue state before space: " << pbState.RemainingQueueSpace << " samples: " << pbState.SamplesQueued << " / min desired samples: " << desc.QueueMinSizeToAvoidStarvation << std::endl;
                 //std::cout << "need " << need_count << std::endl;
                 for (unsigned int i = 0; i < need_count; i++) {
-                    if (vib_interval_counter == 0) {
-                        unsigned int amp = clamp_scale(  255, vib_amplitude[hand]);
+                    unsigned int amp = clamp_scale(255, vib_amplitude[hand]);
+                    if (vib_interval_counter[hand] == 0) {
                         //if (amp > 255) amp = 255;
                         buf[i] = amp;
-                        if (last_vib_interval > 0) {
-                            vib_interval_counter = last_vib_interval - 1;
+                        if (last_vib_interval[hand] > 0) {
+                            vib_interval_counter[hand] = last_vib_interval[hand] - 1;
                         }
-                    } else {
-                        vib_interval_counter--;
-                        buf[i] = 0;
                     }
-                  //  std::cout << " " << (unsigned int) buf[i];
+                    else {
+                        vib_interval_counter[hand]--;
+                        buf[i] = 0;// ((last_vib_interval[hand] - vib_interval_counter[hand]) * amp) / last_vib_interval[hand];
+                    }
+                    //if(vib_amplitude[hand])
+                    //    std::cout << " " << (unsigned int)buf[i];
                 }
-                //std::cout << std::endl;
+                //if(vib_amplitude[hand])std::cout << std::endl;
                 vibuffer.Samples = buf;
                 vibuffer.SamplesCount = need_count;
                 vibuffer.SubmitMode = ovrHapticsBufferSubmit_Enqueue;
                 ovr_SubmitControllerVibration(mSession, (hand == 0) ? ovrControllerType_LTouch : ovrControllerType_RTouch, &vibuffer);
                 ovr_GetControllerVibrationState(mSession, (hand == 0) ? ovrControllerType_LTouch : ovrControllerType_RTouch, &pbState);
-               // std::cout << (counter & 0xff) << " - queue state after space: " << pbState.RemainingQueueSpace << " samples: " << pbState.SamplesQueued << " / min desired samples: " << desc.QueueMinSizeToAvoidStarvation << std::endl;
-
             }
+            // std::cout << (counter & 0xff) << " - queue state after space: " << pbState.RemainingQueueSpace << " samples: " << pbState.SamplesQueued << " / min desired samples: " << desc.QueueMinSizeToAvoidStarvation << std::endl;
 
         }
+
+        
         counter++;
 
     }

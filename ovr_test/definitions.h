@@ -15,6 +15,7 @@
 #include <Windows.h>
 #include <mutex>
 #include <thread>
+#include <atomic>
 
 namespace vr {
     struct HmdQuaternion_t
@@ -42,12 +43,14 @@ struct config_data {
     vr::HmdQuaternion_t world_orientation_q;
     double world_orientation_euler[3];
     double skeleton_smoothing;
+    bool disable_left_controller;
+    bool disable_right_controller;
 };
 
 
 struct vib_sample {
     float amplitude;
-    float freqency;
+    float frequency;
     float duration;
     double timestamp;
 };

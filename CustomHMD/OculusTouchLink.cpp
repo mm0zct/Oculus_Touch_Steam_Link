@@ -394,11 +394,15 @@ bool CServerDriver_OVRTL::Setup()
 #if CREATE_CONTROLLERS
     log_to_buffer("CREATE_CONTROLLERS\n");
     if(!comm_buffer->config.disable_controllers){
-        m_pLController = new CTouchControllerDriver(mSession, false/*, overall_offset, overall_rotation*/);
-        vr::VRServerDriverHost()->TrackedDeviceAdded(m_pLController->GetSerialNumber().c_str(), vr::TrackedDeviceClass_Controller, m_pLController);
+        if (!comm_buffer->config.disable_left_controller) {
+            m_pLController = new CTouchControllerDriver(mSession, false/*, overall_offset, overall_rotation*/);
+            vr::VRServerDriverHost()->TrackedDeviceAdded(m_pLController->GetSerialNumber().c_str(), vr::TrackedDeviceClass_Controller, m_pLController);
+        }
 
-        m_pRController = new CTouchControllerDriver(mSession, true/*, overall_offset, overall_rotation*/);
-        vr::VRServerDriverHost()->TrackedDeviceAdded(m_pRController->GetSerialNumber().c_str(), vr::TrackedDeviceClass_Controller, m_pRController);
+        if (!comm_buffer->config.disable_right_controller) {
+            m_pRController = new CTouchControllerDriver(mSession, true/*, overall_offset, overall_rotation*/);
+            vr::VRServerDriverHost()->TrackedDeviceAdded(m_pRController->GetSerialNumber().c_str(), vr::TrackedDeviceClass_Controller, m_pRController);
+        }
     }
 #endif
 

@@ -8,7 +8,7 @@
 #define _USE_MATH_DEFINES
 #include <math.h>
 
-#define DEBUG_VIB 1
+//#define DEBUG_VIB 1
 
 class unique_window_id {
 public:
@@ -111,7 +111,7 @@ std::vector<config_window_object> config_windows = {
                                 std::wcout << L"control text is: " << Buffer << std::endl;
                                 std::cout << "parsed vib " << offset[0] << " " << offset[1] << " " << offset[2] << std::endl;
                                 vib_sample s;
-                                s.freqency = offset[0];
+                                s.frequency = offset[0];
                                 s.amplitude = offset[1];
                                 s.duration = offset[2];
                                 s.timestamp = ovr_GetTimeInSeconds();
@@ -175,6 +175,28 @@ std::vector<config_window_object> config_windows = {
     }, [](config_window_object* self, HWND parent, shared_buffer* comm_buffer) {
         self->parent = parent;
         CheckDlgButton(parent, self->id.get_id(), comm_buffer->config.disable_controllers ? BST_CHECKED : BST_UNCHECKED);
+        return;
+    } }
+,  {L"Disable Left Controller",L"BUTTON", WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_FLAT | BS_TEXT | BS_CHECKBOX,
+    [](HWND window, WPARAM wp, LPARAM lp, shared_buffer* comm_buffer) {
+        BOOL checked = IsDlgButtonChecked(window, wp);
+        comm_buffer->config.disable_left_controller = !checked;
+        CheckDlgButton(window, wp, checked ? BST_UNCHECKED : BST_CHECKED);
+        return;
+    }, [](config_window_object* self, HWND parent, shared_buffer* comm_buffer) {
+        self->parent = parent;
+        CheckDlgButton(parent, self->id.get_id(), comm_buffer->config.disable_left_controller ? BST_CHECKED : BST_UNCHECKED);
+        return;
+    } }
+, { L"Disable Right Controller",L"BUTTON", WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_FLAT | BS_TEXT | BS_CHECKBOX,
+    [](HWND window, WPARAM wp, LPARAM lp, shared_buffer* comm_buffer) {
+        BOOL checked = IsDlgButtonChecked(window, wp);
+        comm_buffer->config.disable_right_controller = !checked;
+        CheckDlgButton(window, wp, checked ? BST_UNCHECKED : BST_CHECKED);
+        return;
+    }, [](config_window_object* self, HWND parent, shared_buffer* comm_buffer) {
+        self->parent = parent;
+        CheckDlgButton(parent, self->id.get_id(), comm_buffer->config.disable_right_controller ? BST_CHECKED : BST_UNCHECKED);
         return;
     } }
 ,  {L"Universe ID",L"EDIT", WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_FLAT | BS_TEXT | ES_READONLY,
@@ -621,7 +643,7 @@ GUI_Manager::GUI_Manager(shared_buffer* comm_buffer)
     {
         window = CreateWindowEx(0, L"MyWindowsApp", L"OculusTouchlink Configuration",
             WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT,
-            600, 650, 0, 0, GetModuleHandle(0), 0);
+            500, 670, 0, 0, GetModuleHandle(0), 0);
 
     }
 

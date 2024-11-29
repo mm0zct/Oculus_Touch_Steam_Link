@@ -35,6 +35,7 @@
 #include <thread>
 #include <chrono>
 #include <iostream>
+#include <atomic>
 
 
 #if defined( _WINDOWS )
@@ -67,6 +68,8 @@ struct config_data {
     vr::HmdQuaternion_t world_orientation_q;
     double world_orientation_euler[3];
     double skeleton_smoothing;
+    bool disable_left_controller;
+    bool disable_right_controller;
 };
 
 struct vib_sample {
