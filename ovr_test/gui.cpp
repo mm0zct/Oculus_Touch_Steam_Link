@@ -137,10 +137,10 @@ std::vector<config_window_object> config_windows = {
     [](HWND window, WPARAM wp, LPARAM lp, shared_buffer* comm_buffer) {
         BOOL checked = IsDlgButtonChecked(window, wp);
         comm_buffer->config.external_tracking = !checked;
-        CheckDlgButton(window, wp, checked? BST_UNCHECKED:BST_CHECKED);
+        CheckDlgButton(window, wp, checked ? BST_UNCHECKED : BST_CHECKED);
         return;
     }, [](config_window_object* self, HWND parent, shared_buffer* comm_buffer) {
-         self->parent = parent;
+        self->parent = parent;
         CheckDlgButton(parent, self->id.get_id(), comm_buffer->config.external_tracking ? BST_CHECKED : BST_UNCHECKED);
         return;
     } }
@@ -164,6 +164,17 @@ std::vector<config_window_object> config_windows = {
     }, [](config_window_object* self, HWND parent, shared_buffer* comm_buffer) {
         self->parent = parent;
         CheckDlgButton(parent, self->id.get_id(), comm_buffer->config.track_hmd ? BST_CHECKED : BST_UNCHECKED);
+        return;
+    } }
+,  {L"Show Sensors in Playspace",L"BUTTON", WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_FLAT | BS_TEXT | BS_CHECKBOX,
+    [](HWND window, WPARAM wp, LPARAM lp, shared_buffer* comm_buffer) {
+        BOOL checked = IsDlgButtonChecked(window, wp);
+        comm_buffer->config.show_sensors_steam = !checked;
+        CheckDlgButton(window, wp, checked ? BST_UNCHECKED : BST_CHECKED);
+        return;
+    }, [](config_window_object* self, HWND parent, shared_buffer* comm_buffer) {
+        self->parent = parent;
+        CheckDlgButton(parent, self->id.get_id(), comm_buffer->config.show_sensors_steam ? BST_CHECKED : BST_UNCHECKED);
         return;
     } }
 ,  {L"Disable Controllers",L"BUTTON", WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_FLAT | BS_TEXT | BS_CHECKBOX,
@@ -643,7 +654,7 @@ GUI_Manager::GUI_Manager(shared_buffer* comm_buffer)
     {
         window = CreateWindowEx(0, L"MyWindowsApp", L"OculusTouchlink Configuration",
             WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT,
-            500, 670, 0, 0, GetModuleHandle(0), 0);
+            500, 690, 0, 0, GetModuleHandle(0), 0);
 
     }
 
