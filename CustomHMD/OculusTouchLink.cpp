@@ -57,12 +57,12 @@ EVRInitError CWatchdogDriver_Sample::Init(vr::IVRDriverContext* pDriverContext)
     // be pressed. A real driver should wait for a system button event or something else from the 
     // the hardware that signals that the VR system should start up.
     g_bExiting = false;
-    m_pWatchdogThread = new std::thread(WatchdogThreadFunction);
+    /*m_pWatchdogThread = new std::thread(WatchdogThreadFunction);
     if (!m_pWatchdogThread)
     {
         DriverLog("Unable to create watchdog thread\n");
         return VRInitError_Driver_Failed;
-    }
+    }*/
 
     return VRInitError_None;
 }
@@ -71,12 +71,12 @@ EVRInitError CWatchdogDriver_Sample::Init(vr::IVRDriverContext* pDriverContext)
 void CWatchdogDriver_Sample::Cleanup()
 {
     g_bExiting = true;
-    if (m_pWatchdogThread)
+    /*if (m_pWatchdogThread)
     {
         m_pWatchdogThread->join();
         delete m_pWatchdogThread;
         m_pWatchdogThread = nullptr;
-    }
+    }*/
 
     CleanupDriverLog();
 }
