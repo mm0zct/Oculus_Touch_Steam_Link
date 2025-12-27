@@ -45,6 +45,7 @@ struct config_data {
     double skeleton_smoothing;
     bool disable_left_controller;
     bool disable_right_controller;
+    bool show_sensors_steam;
 };
 
 
@@ -93,6 +94,8 @@ struct shared_buffer {
     vib_sample_buffer vib_buffers[2];
     uint64_t logging_offset;
     char logging_buffer[1024];
+    unsigned int num_sensors;
+    ovrTrackerPose sensor_poses[4];
 };
 
 extern shared_buffer* comm_buffer;

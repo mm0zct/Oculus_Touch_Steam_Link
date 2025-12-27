@@ -7,6 +7,7 @@
 
 //#define USE_MUTEX 1
 #define ADD_HMD 1
+#define ADD_SENSORS 1
 #define CREATE_CONTROLLERS 1
 
 #define USE_SHARE_MEM_BUFFER 1
@@ -70,6 +71,7 @@ struct config_data {
     double skeleton_smoothing;
     bool disable_left_controller;
     bool disable_right_controller;
+    bool show_sensors_steam;
 };
 
 struct vib_sample {
@@ -118,6 +120,8 @@ struct shared_buffer {
     vib_sample_buffer vib_buffers[2];
     uint64_t logging_offset;
     char logging_buffer[1024];
+    unsigned int num_sensors;
+    ovrTrackerPose sensor_poses[4];
 };
 
 

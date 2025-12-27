@@ -3,7 +3,9 @@
 #include "Common.h"
 #include "TouchControllerDriver.h"
 #include "TouchTrackerDriver.h"
-#include "HeadsetTrackerDriver.h"---------------------------------------------------------------------------
+#include "SensorDriver.h"
+#include "HeadsetTrackerDriver.h"
+//-----------------------------------------------------------------------------
 
 class CWatchdogDriver_Sample : public IVRWatchdogProvider
 {
@@ -81,14 +83,6 @@ void CWatchdogDriver_Sample::Cleanup()
     CleanupDriverLog();
 }
 
-//-----------------------------------------------------------------------------
-// Purpose:
-//-----------------------------------------------------------------------------
-
-
-
-
-
 
 //-----------------------------------------------------------------------------
 // Purpose:
@@ -115,6 +109,9 @@ private:
     void  Render();
     ovrSession mSession = nullptr;
     ovrGraphicsLuid luid{};
+#if ADD_SENSORS
+    std::vector<CTouchSensorDriver*> sensors;
+#endif
 #if ADD_HMD
     CTouchHeadsetTrackerDriver* m_pNullHmdLatest = nullptr;
 #endif
@@ -391,6 +388,15 @@ bool CServerDriver_OVRTL::Setup()
         vr::VRServerDriverHost()->TrackedDeviceAdded(m_pNullHmdLatest->GetSerialNumber().c_str(), vr::TrackedDeviceClass_GenericTracker, m_pNullHmdLatest);
     }
 #endif
+#if ADD_SENSORS
+    //log_to_buffer("ADD_SENSORS");
+    for (int i = 0; i < comm_buffer->num_sensors; i++)
+    {
+        log_to_buffer("Creating tracking reference");
+        sensors.push_back(new CTouchSensorDriver(mSession, i));
+        vr::VRServerDriverHost()->TrackedDeviceAdded(sensors.back()->GetSerialNumber().c_str(), vr::TrackedDeviceClass_TrackingReference, sensors.back());
+    }
+#endif
 #if CREATE_CONTROLLERS
     log_to_buffer("CREATE_CONTROLLERS\n");
     if(!comm_buffer->config.disable_controllers){
@@ -441,6 +447,9 @@ void CServerDriver_OVRTL::Cleanup()
         m_pNullHmdLatest = NULL;
     }
 #endif
+#if ADD_SENSORS
+    sensors.clear();
+#endif
 #if CREATE_CONTROLLERS
     if (m_pLController) delete m_pLController;
     m_pLController = NULL;
@@ -482,6 +491,9 @@ void CServerDriver_OVRTL::RunFrame()
     {
         m_pNullHmdLatest->RunFrame();
     }
+#endif
+#if ADD_SENSORS
+    for (CTouchSensorDriver* sensor : sensors) sensor->RunFrame();
 #endif
     if (m_pLController && (m_pLController->m_unObjectId != vr::k_unTrackedDeviceIndexInvalid))
     {
@@ -545,5 +557,3 @@ HMD_DLL_EXPORT void* HmdDriverFactory(const char* pInterfaceName, int* pReturnCo
 
     return NULL;
 }
-
-

@@ -62,6 +62,8 @@ void main_loop(ovrSession mSession, HANDLE comm_mutex, shared_buffer* comm_buffe
         }
     }
 
+    for (int i = 0; i < comm_buffer->num_sensors; i++) comm_buffer->sensor_poses[i] = ovr_GetTrackerPose(mSession, i);
+
     ovrResult input_res[2];
     ovrInputState inputState[2];
     for (int i = 0; i < 2; i++) {
@@ -145,6 +147,7 @@ void no_graphics_start(shared_buffer* comm_buffer, HANDLE comm_mutex) {
 
 
     comm_buffer->config.num_objects = (ovr_GetConnectedControllerTypes(mSession) >> 8) & 0xf;
+    comm_buffer->num_sensors = ovr_GetTrackerCount(mSession);
 
     std::thread vib_thread;
     if(!haptics_direct)
@@ -200,8 +203,10 @@ void reset_config_settings(config_data& config) {
     strncpy_s(comm_buffer->config.manufacturer_name, "Oculus_link", 127);
     strncpy_s(comm_buffer->config.tracking_space_name, "oculus_link", 127);
     comm_buffer->config.num_objects = (ovr_GetConnectedControllerTypes(mSession) >> 8) & 0xf;
+    comm_buffer->num_sensors = ovr_GetTrackerCount(mSession);
     config.external_tracking = true;
     config.track_hmd = false;
+    config.show_sensors_steam = true;
     config.disable_controllers = false;
     config.disable_left_controller = false;
     config.disable_right_controller = false;
@@ -250,6 +255,7 @@ void save_config_to_file(config_data& config) {
     ofs << config.num_objects << std::endl;
     ofs << config.external_tracking << std::endl;
     ofs << config.track_hmd << std::endl;
+    ofs << config.show_sensors_steam << std::endl;
     ofs << (unsigned)config.min_amplitude << std::endl;
     ofs << config.amplitude_scale << std::endl;
     ofs << config.sqrt_pre_filter << std::endl;
@@ -300,6 +306,7 @@ void load_config_from_file(config_data& config) {
         ifs >> config.num_objects;
         ifs >> config.external_tracking;
         ifs >> config.track_hmd;
+        ifs >> config.show_sensors_steam;
         unsigned min_amp;
         ifs >> min_amp;
         config.min_amplitude = min_amp;
@@ -344,6 +351,7 @@ int main(int argc, char** argsv)
     std::cout << "Track the headset as a tracking object y/n" << std::endl;
     std::cout << "Minumim haptic amplitude 0-255 (64)" << std::endl;
     std::cout << "haptic scale multiplier 0-inf (1.0)" << std::endl;
+    std::cout << "Show Oculus Vr sensors in steam?  y/n" << std::endl;
     std::cout << "" << std::endl;
     std::cout << "This program is super dumb and expects all of the arguments or none (for defaults), suggested invocations:" << std::endl;
     std::cout << "ovr_test.exe n 1 Oculus oculus n 10 n n 64 1.0(must be use with ovr_dummy.exe)" << std::endl;
@@ -392,8 +400,8 @@ int main(int argc, char** argsv)
     comm_buffer->vib_buffers[0].reset();
     comm_buffer->vib_buffers[1].reset();
     reset_config_settings(comm_buffer->config);
-    if (argc != 11) {
-        std::cout << " <11 arguments, using defaults: n 31 Oculus_link oculus_link n 5 n n y n" << std::endl;
+    if (argc != 12) {
+        std::cout << " <12 arguments, using defaults: n 31 Oculus_link oculus_link n 5 n n y n" << std::endl;
         load_config_from_file(comm_buffer->config);
     } else {
         comm_buffer->config.do_rendering = (std::string(argsv[1]) == "y");
@@ -406,6 +414,7 @@ int main(int argc, char** argsv)
         comm_buffer->config.track_hmd = (std::string(argsv[9]) == "y");
         comm_buffer->config.min_amplitude = strtoul(argsv[10],0, 10);
         comm_buffer->config.amplitude_scale = strtof(argsv[11],0);
+        comm_buffer->config.show_sensors_steam = (std::string(argsv[12]) == "y");
     }
 
     HANDLE comm_mutex = CreateMutex(0, true, L"Local\\oculus_steamvr_touch_controller_mutex");
