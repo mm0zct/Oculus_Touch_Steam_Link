@@ -13,9 +13,9 @@ A full CV1 touch kit (HMD, two controllers, at least two sensors)
 
 The HMD you want to use. This will work for WMR, Lighthouse HMDs such as Index and Vive (you need BOTH lighthouses and CV1 sensor for lighthouse HMDs), and Quest (Quest will ONLY WORK WITH ALVR OR VIRTUAL DESKTOP). It is possible to do this without the HMD's native controllers by calibrating the CV1 touch controller against the HMD you are using.
 
-OpenVR Space Calibrator https://github.com/pushrax/OpenVR-SpaceCalibrator/releases
+OpenVR Space Calibrator - now available directly through steam Steam as a free application
 
-OpenVR Advanced Settings from Steam https://store.steampowered.com/app/1009850/OVR_Advanced_Settings/ (for creating a proper steamVR chaperone after setting up the mixedVR system -- required for certain games! Note you can also get this from GitHub https://github.com/OpenVR-Advanced-Settings/OpenVR-AdvancedSettings/releases but Steam will get you the latest stable release and integrate better)
+Optional: OpenVR Advanced Settings from Steam https://store.steampowered.com/app/1009850/OVR_Advanced_Settings/ (for creating a proper steamVR chaperone after setting up the mixedVR system -- required for certain games! Note you can also get this from GitHub https://github.com/OpenVR-Advanced-Settings/OpenVR-AdvancedSettings/releases but Steam will get you the latest stable release and integrate better)
 
 Steps:
 
