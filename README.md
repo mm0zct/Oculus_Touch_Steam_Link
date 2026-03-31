@@ -7,15 +7,15 @@ https://github.com/PumkinSpice/MixedVR/wiki/MixedVR-CV1-Touch
 Prerequisites:
 This SteamVR Driver
 
-ODTKRA https://github.com/DeltaNeverUsed/ODTKRA - this will keep the Oculus runtime and headset awake
+[ODTKRA](https://github.com/DeltaNeverUsed/ODTKRA) - this will keep the Oculus runtime and headset awake
 
 A full CV1 touch kit (HMD, two controllers, at least two sensors)
 
 The HMD you want to use. This will work for WMR, Lighthouse HMDs such as Index and Vive (you need BOTH lighthouses and CV1 sensor for lighthouse HMDs), and Quest (Quest will ONLY WORK WITH ALVR OR VIRTUAL DESKTOP). It is possible to do this without the HMD's native controllers by calibrating the CV1 touch controller against the HMD you are using.
 
-OpenVR Space Calibrator - now available directly through steam Steam as a free application
+Space Calibrator - for aligning the CV1 playspace with that of your HMD's. Available on [Steam](https://store.steampowered.com/app/3368750/Space_Calibrator/) and [GitHub](https://github.com/hyblocker/OpenVR-SpaceCalibrator), however Steam is recommended.
 
-Optional: OpenVR Advanced Settings from Steam https://store.steampowered.com/app/1009850/OVR_Advanced_Settings/ (for creating a proper steamVR chaperone after setting up the mixedVR system -- required for certain games! Note you can also get this from GitHub https://github.com/OpenVR-Advanced-Settings/OpenVR-AdvancedSettings/releases but Steam will get you the latest stable release and integrate better)
+Optional: OpenVR Advanced Settings - for creating a proper SteamVR chaperone after setting up the MixedVR system. Required for certain games. Available on [Steam](https://store.steampowered.com/app/1009850/OVR_Advanced_Settings/) and [GitHub](https://github.com/OpenVR-Advanced-Settings/OpenVR-AdvancedSettings/releases), however Steam is recommended, and will support the developers.
 
 Steps:
 
@@ -23,7 +23,9 @@ Have the HMD you want to use all set up with its native home (WMR Portal, Quest'
 
 Once you have everything set up in its native environment and have installed SteamVR and anything extra such as WMR for steamVR, start steamVR. Make sure everything works. You will likely have to disable SteamVR home if you're on a G2.
 
-Exit SteamVR and steam (completely close out of steam!). Install openVR Space Calibrator.
+Install Space Calibrator via Steam or GitHub (see above).
+
+Exit SteamVR and Steam (completely close out of Steam!).
 
 Close out of your native HMD's environment. If on a G2, Index, or Vive, disconnect the power from its link box/HMD cable. If on other WMR HMD, disconnect its USB from the PC.
 
