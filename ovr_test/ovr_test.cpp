@@ -598,5 +598,8 @@ void vibration_thread(ovrSession mSession) {
         
         counter++;
 
+        // Avoid busy-spinning between haptic queue updates, including when idle.
+        Sleep(1);
+
     }
 }
